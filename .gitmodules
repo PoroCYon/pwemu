@@ -1,0 +1,3 @@
+[submodule "ext/libco"]
+	path = ext/libco
+	url = https://github.com/higan-emu/libco
