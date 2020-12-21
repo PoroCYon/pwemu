@@ -25,6 +25,6 @@ pub fn main() anyerror!void {
     try H838606F.init(&h8, allocar, allocgp, @ptrCast(*[48*1024]u8, flash));
 
     h8.reset();
-    h8.run(10);
+    h8.run(100);
 }
 

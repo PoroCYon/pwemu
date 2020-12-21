@@ -2,7 +2,7 @@
 const std = @import("std");
 const print = std.debug.print;
 
-const interp = @import("h8300h_interp.zig");
+const interp = @import("h8300h/interp.zig");
 
 usingnamespace @import("h838606f.zig");
 
@@ -14,6 +14,15 @@ pub const H8300H = struct {
     ccr: CCR,
     state: State,
     pending: PendingExn,
+
+    pub fn stat(self: *const H8300H) void {
+        print("pc=0x{x:4} fetched=0x{x:4} ccr={} state={} pending={}\n",
+            .{self.pc,self.fetch,self.ccr,self.state,self.pending});
+        print("er0=0x{x:8} er1=0x{x:8} er2=0x{x:8} er3=0x{x:8}\n",
+            .{self.reg[0],self.reg[1],self.reg[2],self.reg[3]});
+        print("er4=0x{x:8} er5=0x{x:8} er6=0x{x:8} er7=0x{x:8}\n",
+            .{self.reg[4],self.reg[5],self.reg[6],self.reg[7]});
+    }
 
     inline fn sp(self: *H8300H) u16 { return @truncate(u16, self.reg[7]); }
     inline fn ssp(self: *H8300H, nsp: u16) void {
@@ -150,9 +159,11 @@ pub const H8300H = struct {
     }
 
     fn handle_exec(self: *H8300H) void {
-        const insnlw = self.fetch;
+        // TODO: if ldc(/stc?), do NOT go to exn state! AT ALL!
+        //const insnlw = self.fetch;
 
-        self.fetch = self.read16(self.pc); self.pc += 2;
+        //self.fetch = self.read16(self.pc); self.pc += 2; // part if exec
+        interp.exec(self);
     }
 
     pub fn runthread(self: *H8300H) void {

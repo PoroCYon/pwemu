@@ -1,4 +1,5 @@
 bin/*
 obj/*
-zig-cache/*
+**/zig-cache/*
+**/_nop/
 pw*.rom
