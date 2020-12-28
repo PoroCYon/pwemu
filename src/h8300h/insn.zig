@@ -38,8 +38,27 @@ pub const OpRn = enum(u4) {
 pub const OpERn = enum(u3) {
     er0 = 0, er1 = 1, er2 = 2, er3 = 3, er4 = 4, er5 = 5, er6 = 6, er7 = 7
 };
-pub const I12 = enum(u1) { one = 0, two = 1 };
-pub const I124 = enum(u4) { one = 0, two = 8, four = 9 };
+pub const I12 = enum(u1) {
+    one = 0, two = 1,
+
+    pub inline fn val(self: I12) u2 {
+        return switch (self) {
+            .one => 1,
+            .two => 2
+        };
+    }
+};
+pub const I124 = enum(u4) {
+    one = 0, two = 8, four = 9,
+
+    pub inline fn val(self: I124) u3 {
+        return switch (self) {
+            .one  => 1,
+            .two  => 2,
+            .four => 4,
+        };
+    }
+};
 pub const Opcode = enum {
     add_b_imm, add_w_imm, add_l_imm, add_b_rn, add_w_rn, add_l_rn, // imm, rn or rn, rn
     adds, // {1,2,4}, rn

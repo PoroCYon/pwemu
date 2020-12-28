@@ -15,159 +15,633 @@ const HRow = struct {
     handler: HFn
 };
 
+inline fn xor(a: bool, b: bool) bool { // zig, *please*
+    return (@boolToInt(a) ^ @boolToInt(b)) != 0;
+}
+
+fn mk_me_a_magic_fn(comptime i: comptime_int, myself: anytype) fn(*H8300H, Insn, []const u16)void {
+    const the_tag = @intToEnum(Opcode, i);
+    const real_hfn = @field(myself, "handle_" ++ @tagName(the_tag));
+
+    return (struct {
+        pub fn a(self: *H8300H, insn: Insn, raw: []const u16) void {
+            //print("in magic fn #{} for tag {}\n", .{i, the_tag});
+            //insn.display();
+            switch (insn) {
+                the_tag => |d| real_hfn(self, insn, d, raw),
+                else => unreachable
+            }
+        }
+    }).a;
+}
+
+const insntab = comptime blk: {
+    comptime const ninsn = switch (@typeInfo(Opcode)) {
+        .Enum => |e| blk2: {
+            if (!e.is_exhaustive) @compileError("wtf!");
+            break :blk2 e.fields.len;
+        },
+        else => @compileError("wtf")
+    };
+    var rv: [ninsn]HRow = undefined;
+
+    var i = 0;
+    while (i < ninsn) : (i += 1) {
+        const the_tag = @intToEnum(Opcode, i);
+
+        rv[i] = HRow {
+            .tag = the_tag,
+            .handler = mk_me_a_magic_fn(i, @This()) // need this so 'i' doesn't end up being 226/xorc for all entries
+//            (struct {
+//                pub fn a(self: *H8300H, insn: Insn, raw: []const u16) void {
+//                    print("in magic fn #{} for tag {}\n", .{i, the_tag});
+//                    insn.display();
+//                    switch (insn) {
+//                        the_tag => |d| real_hfn(self, insn, d, raw),
+//                        else => unreachable
+//                    }
+//                }
+//            }).a
+        };
+    }
+
+    break :blk rv;
+};
+
+pub fn exec(self: *H8300H) void {
+    const possible_words = [_]u16{
+        self.fetch,
+        self.sys.read16(self.pc+0),
+        self.sys.read16(self.pc+2),
+        self.sys.read16(self.pc+4),
+        self.sys.read16(self.pc+6)
+    };
+    const insn = decode.decodeA(5, possible_words) orelse @panic("illegal insn!");
+    self.stat();
+    //insn.display();
+
+    //print("table index #{}, tag {}\n", .{@enumToInt(@as(Opcode, insn)), @as(Opcode, insn)});
+    const hrow = insntab[@enumToInt(@as(Opcode, insn))];
+    hrow.handler(self, insn, possible_words[0..insn.size()]);
+
+    //self.pc = @truncate(u16, self.pc + insn.size() * 2);
+    //self.cycle((insn.size()-1)*2);
+    //self.fetch = self.read16(self.pc - 2);
+}
+
+fn finf(self: *H8300H, raw: []const u16) void {
+    var i: usize = 1;
+    while (i < raw.len) : (i += 1) {
+        _ = self.read16(self.pc);
+        self.pc += 2;
+    }
+}
+inline fn next(self: *H8300H) void {
+    self.fetch = self.read16(self.pc);
+    self.pc += 2;
+}
+
+fn flg_arith(comptime T: type, self: *H8300H, a: T, b: T, v: T, comptime x: bool) void {
+    const rm = (v >> (@bitSizeOf(T)-1)) != 0;
+    const sm = (a >> (@bitSizeOf(T)-1)) != 0;
+    const dm = (b >> (@bitSizeOf(T)-1)) != 0;
+
+    const rm4 = ((v >> (@bitSizeOf(T)-1-4))&1) != 0;
+    const sm4 = ((a >> (@bitSizeOf(T)-1-4))&1) != 0;
+    const dm4 = ((b >> (@bitSizeOf(T)-1-4))&1) != 0;
+
+    const zzz = self.hasc(.z);
+    self.andc(@intToEnum(CCR, 0xd0)); // i, u, ui
+    if ((sm and dm) or (dm and !rm) or (sm and !rm)) self.orc(.c);
+    if ((sm and dm and !rm) or (!sm and !dm and rm)) self.orc(.v);
+    if (x) {
+        if ((v == 0) and !zzz) self.orc(.z);
+    } else {
+        if (v == 0) self.orc(.z);
+    }
+    if (rm) self.orc(.n);
+    if ((sm4 and dm4) or (dm4 and !rm4) or (sm4 and !rm4)) self.orc(.h);
+}
+fn flg_logic(comptime T: type, self: *H8300H, a: T, b: T, v: T) void {
+    self.andc(@intToEnum(CCR, 0xd0|36)); // i, u, ui, h, c
+    if (v == 0) self.orc(.z);
+    if ((v >> (@bitSizeOf(T)-1)) != 0) self.orc(.n);
+}
+
 fn handle_add_b_imm(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    //finf(self, raw);
+
+    const a = oands.a;
+    const b = self.ghl(oands.b);
+    const r = a +% b;
+    self.shl(oands.b, r);
+    flg_arith(u8, self, a, b, r, false);
+
+    next(self);
+
     print("handler for add_b_imm\n", .{});
     insn.display();
 }
 fn handle_add_w_imm(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+
+    const a = oands.a;
+    const b = self.grn(oands.b);
+    const r = a +% b;
+    self.srn(oands.b, r);
+    flg_arith(u16, self, a, b, r, false);
+
+    next(self);
+
     print("handler for add_w_imm\n", .{});
     insn.display();
 }
 fn handle_add_l_imm(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+
+    const a = oands.a;
+    const b = self.ger(oands.b);
+    const r = a +% b;
+    self.ser(oands.b, r);
+    flg_arith(u32, self, a, b, r, false);
+
+    next(self);
+
     print("handler for add_l_imm\n", .{});
     insn.display();
 }
 fn handle_add_b_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    //finf(self, raw);
+
+    const a = self.ghl(oands.a);
+    const b = self.ghl(oands.b);
+    const r = a +% b;
+    self.shl(oands.b, r);
+    flg_arith(u8, self, a, b, r, false);
+
+    next(self);
+
     print("handler for add_b_rn\n", .{});
     insn.display();
 }
 fn handle_add_w_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+
+    const a = self.grn(oands.a);
+    const b = self.grn(oands.b);
+    const r = a +% b;
+    self.srn(oands.b, r);
+    flg_arith(u16, self, a, b, r, false);
+
+    next(self);
+
     print("handler for add_w_rn\n", .{});
     insn.display();
 }
 fn handle_add_l_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+
+    const a = self.ger(oands.a);
+    const b = self.ger(oands.b);
+    const r = a +% b;
+    self.ser(oands.b, r);
+    flg_arith(u32, self, a, b, r, false);
+
+    next(self);
+
     print("handler for add_l_rn\n", .{});
     insn.display();
 }
 fn handle_adds(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    //finf(self, raw);
+    self.ser(oands.b, self.ger(oands.b) +% oands.a.val());
+    next(self);
+
     print("handler for adds\n", .{});
     insn.display();
 }
 fn handle_addx_imm(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    //finf(self, raw);
+
+    const a = oands.a;
+    const b = self.ghl(oands.b);
+    const r = a +% b;
+    self.shl(oands.b, r);
+    flg_arith(u8, self, a, b, r, true);
+
+    next(self);
+
     print("handler for addx_imm\n", .{});
     insn.display();
 }
 fn handle_addx_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    //finf(self, raw);
+
+    const a = self.ghl(oands.a);
+    const b = self.ghl(oands.b);
+    const r = a +% b;
+    self.shl(oands.b, r);
+    flg_arith(u8, self, a, b, r, true);
+
+    next(self);
+
     print("handler for addx_rn\n", .{});
     insn.display();
 }
 fn handle_and_b_imm(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    //finf(self, raw);
+
+    const a = oands.a;
+    const b = self.ghl(oands.b);
+    const r = a & b;
+    self.shl(oands.b, r);
+    flg_logic(u8, self, a, b, r);
+
+    next(self);
+
     print("handler for and_b_imm\n", .{});
     insn.display();
 }
 fn handle_and_w_imm(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+
+    const a = oands.a;
+    const b = self.grn(oands.b);
+    const r = a & b;
+    self.srn(oands.b, r);
+    flg_logic(u16, self, a, b, r);
+
+    next(self);
+
     print("handler for and_w_imm\n", .{});
     insn.display();
 }
 fn handle_and_l_imm(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+
+    const a = oands.a;
+    const b = self.ger(oands.b);
+    const r = a & b;
+    self.ser(oands.b, r);
+    flg_logic(u32, self, a, b, r);
+
+    next(self);
+
     print("handler for and_l_imm\n", .{});
     insn.display();
 }
 fn handle_and_b_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    //finf(self, raw);
+
+    const a = self.ghl(oands.a);
+    const b = self.ghl(oands.b);
+    const r = a & b;
+    self.shl(oands.b, r);
+    flg_logic(u8, self, a, b, r);
+
+    next(self);
+
     print("handler for and_b_rn\n", .{});
     insn.display();
 }
 fn handle_and_w_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+
+    const a = self.grn(oands.a);
+    const b = self.grn(oands.b);
+    const r = a & b;
+    self.srn(oands.b, r);
+    flg_logic(u16, self, a, b, r);
+
+    next(self);
+
     print("handler for and_w_rn\n", .{});
     insn.display();
 }
 fn handle_and_l_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+
+    const a = self.ger(oands.a);
+    const b = self.ger(oands.b);
+    const r = a & b;
+    self.ser(oands.b, r);
+    flg_logic(u32, self, a, b, r);
+
+    next(self);
+
     print("handler for and_l_rn\n", .{});
     insn.display();
 }
 fn handle_andc(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    //finf(self, raw);
+
+    self.andc(@intToEnum(CCR, oands));
+
+    next(self);
+
     print("handler for andc\n", .{});
     insn.display();
 }
 fn handle_bcc_pcrel8(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    //finf(self, raw);
+    next(self);
+
+    const offu16 = if ((oands.a & 0x80) != 0) (0xff00 | @as(u16, oands.a))
+                   else @as(u16, oands.a);
+    const ea = self.pc +% offu16;
+    const branch = switch (oands.cc) {
+        .a => true, .n => false,
+        .hi => !self.hasc(.c) and !self.hasc(.z),
+        .ls =>  self.hasc(.c) or   self.hasc(.z),
+        .cc => !self.hasc(.c), .cs => self.hasc(.c),
+        .ne => !self.hasc(.z), .eq => self.hasc(.z),
+        .vc => !self.hasc(.v), .vs => self.hasc(.v),
+        .pl => !self.hasc(.n), .mi => self.hasc(.n),
+        .ge => !xor(self.hasc(.n), self.hasc(.v)),
+        .lt =>  xor(self.hasc(.n), self.hasc(.v)),
+        .gt => !xor(self.hasc(.n), self.hasc(.v)) and !self.hasc(.z),
+        .le =>  xor(self.hasc(.n), self.hasc(.v)) or   self.hasc(.z),
+    };
+
+    if (branch) {
+        self.pc = ea;
+        next(self);
+    } else _ = self.read16(ea);
+
     print("handler for bcc_pcrel8\n", .{});
     insn.display();
 }
 fn handle_bcc_pcrel16(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+    self.cycle(2);
+
+    const ea = self.pc +% oands.a;
+    const branch = switch (oands.cc) {
+        .a => true, .n => false,
+        .hi => !self.hasc(.c) and !self.hasc(.z),
+        .ls =>  self.hasc(.c) or   self.hasc(.z),
+        .cc => !self.hasc(.c), .cs => self.hasc(.c),
+        .ne => !self.hasc(.z), .eq => self.hasc(.z),
+        .vc => !self.hasc(.v), .vs => self.hasc(.v),
+        .pl => !self.hasc(.n), .mi => self.hasc(.n),
+        .ge => !xor(self.hasc(.n), self.hasc(.v)),
+        .lt =>  xor(self.hasc(.n), self.hasc(.v)),
+        .gt => !xor(self.hasc(.n), self.hasc(.v)) and !self.hasc(.z),
+        .le =>  xor(self.hasc(.n), self.hasc(.v)) or   self.hasc(.z),
+    };
+
+    if (branch) {
+        self.pc = ea;
+        next(self);
+    } else _ = self.read16(ea);
+
     print("handler for bcc_pcrel16\n", .{});
     insn.display();
 }
 fn handle_bsr_pcrel8(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    //finf(self, raw);
+    next(self);
+
+    const oldpc = self.pc;
+    const offu16 = if ((oands & 0x80) != 0) (0xff00 | @as(u16, oands))
+                   else @as(u16, oands);
+    const ea = oldpc +% offu16;
+    self.pc = ea;
+    next(self);
+
+    self.write16(self.gsp(), oldpc);
+    self.ssp(self.gsp() -% 2);
+
     print("handler for bsr_pcrel8\n", .{});
     insn.display();
 }
 fn handle_bsr_pcrel16(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+    self.cycle(2);
+
+    const oldpc = self.pc;
+    const ea = oldpc +% oands;
+    self.pc = ea;
+    next(self);
+
+    self.write16(self.gsp(), oldpc);
+    self.ssp(self.gsp() -% 2);
+
     print("handler for bsr_pcrel16\n", .{});
     insn.display();
 }
 fn handle_band_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    //finf(self, raw);
+
+    const r = self.ghl(oands.b) & (@as(u8,1) << oands.a);
+    self.setc(.c, if (self.hasc(.c) and r != 0) .c else .none);
+
+    next(self);
     print("handler for band_rn\n", .{});
     insn.display();
 }
 fn handle_band_Mern(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+
+    const a = @truncate(u16, self.ger(oands.b));
+    const m = self.read8(a);
+    const r = m & (@as(u8,1) << oands.a);
+    self.setc(.c, if (self.hasc(.c) and r != 0) .c else .none);
+
+    next(self);
     print("handler for band_Mern\n", .{});
     insn.display();
 }
 fn handle_band_abs8(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+
+    const m = self.read8(@as(u16, oands.b) | 0xff00);
+    const r = m & (@as(u8,1) << oands.a);
+    self.setc(.c, if (self.hasc(.c) and r != 0) .c else .none);
+
+    next(self);
     print("handler for band_abs8\n", .{});
     insn.display();
 }
 fn handle_bclr_imm_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    //finf(self, raw);
+
+    const m = self.ghl(oands.b);
+    const r = m & ~(@as(u8,1) << oands.a);
+    self.shl(oands.b, r);
+
+    next(self);
     print("handler for bclr_imm_rn\n", .{});
     insn.display();
 }
 fn handle_bclr_imm_Mern(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+
+    const a = @truncate(u16, self.ger(oands.b));
+    const m = self.read8(a);
+    const r = m & ~(@as(u8,1) << oands.a);
+    next(self);
+    self.write8(a, r);
+
     print("handler for bclr_imm_Mern\n", .{});
     insn.display();
 }
 fn handle_bclr_imm_abs8(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+
+    const a = @as(u16, oands.b) | 0xff00;
+    const m = self.read8(a);
+    const r = m & ~(@as(u8,1) << oands.a);
+    next(self);
+    self.write8(a, r);
+
     print("handler for bclr_imm_abs8\n", .{});
     insn.display();
 }
 fn handle_bclr_rn_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    //finf(self, raw);
+
+    const m = self.ghl(oands.b);
+    const r = m & ~(@as(u8,1) << (@truncate(u3,self.ghl(oands.a)) & 7));
+    self.shl(oands.b, r);
+
+    next(self);
     print("handler for bclr_rn_rn\n", .{});
     insn.display();
 }
 fn handle_bclr_rn_Mern(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+
+    const a = @truncate(u16, self.ger(oands.b));
+    const m = self.read8(a);
+    const r = m & ~(@as(u8,1) << (@truncate(u3,self.ghl(oands.a)) & 7));
+    next(self);
+    self.write8(a, r);
+
     print("handler for bclr_rn_Mern\n", .{});
     insn.display();
 }
 fn handle_bclr_rn_abs8(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+
+    const a = @as(u16, oands.b) | 0xff00;
+    const m = self.read8(a);
+    const r = m & ~(@as(u8,1) << (@truncate(u3,self.ghl(oands.a)) & 7));
+    next(self);
+    self.write8(a, r);
+
     print("handler for bclr_rn_abs8\n", .{});
     insn.display();
 }
 fn handle_biand_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    //finf(self, raw);
+
+    const r = self.ghl(oands.b) & (@as(u8,1) << oands.a);
+    self.setc(.c, if (self.hasc(.c) and r == 0) .c else .none);
+
+    next(self);
     print("handler for biand_rn\n", .{});
     insn.display();
 }
 fn handle_biand_Mern(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+
+    const a = @truncate(u16, self.ger(oands.b));
+    const m = self.read8(a);
+    const r = m & (@as(u8,1) << oands.a);
+    self.setc(.c, if (self.hasc(.c) and r == 0) .c else .none);
+
+    next(self);
     print("handler for biand_Mern\n", .{});
     insn.display();
 }
 fn handle_biand_abs8(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+
+    const a = @as(u16, oands.b) | 0xff00;
+    const m = self.read8(a);
+    const r = m & (@as(u8,1) << oands.a);
+    self.setc(.c, if (self.hasc(.c) and r == 0) .c else .none);
+
+    next(self);
     print("handler for biand_abs8\n", .{});
     insn.display();
 }
 fn handle_bild_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    //finf(self, raw);
+
+    const r = self.ghl(oands.b) & (@as(u8,1) << oands.a);
+    self.setc(.c, if (r == 0) .c else .none);
+
+    next(self);
     print("handler for bild_rn\n", .{});
     insn.display();
 }
 fn handle_bild_Mern(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+
+    const a = @truncate(u16,self.ger(oands.b));
+    const m = self.read8(a);
+    const r = m & (@as(u8,1) << oands.a);
+    self.setc(.c, if (r == 0) .c else .none);
+
+    next(self);
     print("handler for bild_Mern\n", .{});
     insn.display();
 }
 fn handle_bild_abs8(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+
+    const a = @as(u16, oands.b) | 0xff00;
+    const m = self.read8(a);
+    const r = m & (@as(u8,1) << oands.a);
+    self.setc(.c, if (r == 0) .c else .none);
+
+    next(self);
     print("handler for bild_abs8\n", .{});
     insn.display();
 }
 fn handle_bior_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    //finf(self, raw);
+
+    const r = self.ghl(oands.b) & (@as(u8,1) << oands.a);
+    self.setc(.c, if (self.hasc(.c) or r == 0) .c else .none);
+
+    next(self);
     print("handler for bior_rn\n", .{});
     insn.display();
 }
 fn handle_bior_Mern(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+
+    const a = @truncate(u16, self.ger(oands.b));
+    const m = self.read8(a);
+    const r = m & (@as(u8,1) << oands.a);
+    self.setc(.c, if (self.hasc(.c) or r == 0) .c else .none);
+
+    next(self);
     print("handler for bior_Mern\n", .{});
     insn.display();
 }
 fn handle_bior_abs8(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+
+    const a = @as(u16, oands.b) | 0xff00;
+    const m = self.read8(a);
+    const r = m & (@as(u8,1) << oands.a);
+    self.setc(.c, if (self.hasc(.c) or r == 0) .c else .none);
+
+    next(self);
     print("handler for bior_abs8\n", .{});
     insn.display();
 }
 fn handle_bist_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    const m = self.ghl(oands.b);
+    const v = (m & ~(@as(u8,1) << oands.a))
+            | (@as(u8, @boolToInt(self.hasc(.c))) << oands.a);
+    self.shl(oands.b, v);
+
+    next(self);
     print("handler for bist_rn\n", .{});
     insn.display();
 }
@@ -480,6 +954,14 @@ fn handle_mov_b_imm_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u
     insn.display();
 }
 fn handle_mov_w_imm_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    const a = oands.a;
+    const b = &self.reg[@enumToInt(oands.b) & 7];
+    if ((@enumToInt(oands.b) & 8) == 1) { // en
+        b.* = (b.* & 0x0000ffff) | (@as(u32,a) << 16);
+    } else {
+        b.* = (b.* & 0xffff0000) | (@as(u32,a) << 00);
+    }
+
     print("handler for mov_w_imm_rn\n", .{});
     insn.display();
 }
@@ -919,267 +1401,4 @@ fn handle_xorc(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void
     print("handler for xorc\n", .{});
     insn.display();
 }
-
-fn mk_me_a_magic_fn(comptime i: comptime_int, myself: anytype) fn(*H8300H, Insn, []const u16)void {
-    const the_tag = @intToEnum(Opcode, i);
-    const real_hfn = @field(myself, "handle_" ++ @tagName(the_tag));
-
-    return (struct {
-        pub fn a(self: *H8300H, insn: Insn, raw: []const u16) void {
-            //print("in magic fn #{} for tag {}\n", .{i, the_tag});
-            //insn.display();
-            switch (insn) {
-                the_tag => |d| real_hfn(self, insn, d, raw),
-                else => unreachable
-            }
-        }
-    }).a;
-}
-
-const insntab = comptime blk: {
-    comptime const ninsn = switch (@typeInfo(Opcode)) {
-        .Enum => |e| blk2: {
-            if (!e.is_exhaustive) @compileError("wtf!");
-            break :blk2 e.fields.len;
-        },
-        else => @compileError("wtf")
-    };
-    var rv: [ninsn]HRow = undefined;
-
-    var i = 0;
-    while (i < ninsn) : (i += 1) {
-        const the_tag = @intToEnum(Opcode, i);
-
-        rv[i] = HRow {
-            .tag = the_tag,
-            .handler = mk_me_a_magic_fn(i, @This()) // need this so 'i' doesn't end up being 226/xorc for all entries
-//            (struct {
-//                pub fn a(self: *H8300H, insn: Insn, raw: []const u16) void {
-//                    print("in magic fn #{} for tag {}\n", .{i, the_tag});
-//                    insn.display();
-//                    switch (insn) {
-//                        the_tag => |d| real_hfn(self, insn, d, raw),
-//                        else => unreachable
-//                    }
-//                }
-//            }).a
-        };
-    }
-
-    break :blk rv;
-};
-
-pub fn exec(self: *H8300H) void {
-    const possible_words = [_]u16{
-        self.fetch,
-        self.sys.read16(self.pc+0),
-        self.sys.read16(self.pc+2),
-        self.sys.read16(self.pc+4),
-        self.sys.read16(self.pc+6)
-    };
-    const insn = decode.decodeA(5, possible_words) orelse @panic("illegal insn!");
-    self.stat();
-    //insn.display();
-
-    //print("table index #{}, tag {}\n", .{@enumToInt(@as(Opcode, insn)), @as(Opcode, insn)});
-    const hrow = insntab[@enumToInt(@as(Opcode, insn))];
-    hrow.handler(self, insn, possible_words[0..insn.size()]);
-
-    self.pc = @truncate(u16, self.pc + insn.size() * 2);
-    self.cycle((insn.size()-1)*2);
-    self.fetch = self.read16(self.pc - 2);
-}
-
-//    return switch ((fetch >> 12) & 0xf) {
-//        0 => switch ((fetch >> 8) & 0xf) {
-//            0 => .nop,
-//            1 => switch ((fetch >> 4) & 0xf) {
-//                0 => dec_mov(T, fetch, getwd, ud),
-//                4 => dec_ldcstc(T, fetch, getwd, ud),
-//                8 => .sleep,
-//                0xc => if ((fetch & 0xf) == 0) blk: {
-//                    const cd = getwd(ud);
-//                    break :blk switch ((cd >> 8) & 0xff) {
-//                        0x50, 0x52 => // TODO mulxs
-//                        else => @panic("illegal insn!"),
-//                    };
-//                } else @panic("illegal insn!"),
-//                0xd => if ((fetch & 0xf) == 0) blk: {
-//                    const cd = getwd(ud);
-//                    break :blk switch ((cd >> 8) & 0xff) {
-//                        0x51, 0x53 => // TODO divxs
-//                        else => @panic("illegal insn!"),
-//                    };
-//                } else @panic("illegal insn!"),
-//                0xf => if ((fetch & 0xf) == 0) blk: {
-//                    const cd = getwd(ud);
-//                    break :blk switch ((cd >> 8) & 0xff) {
-//                        0x64 => // TODO or
-//                        0x65 => // TODO xor
-//                        0x66 => // TODO and
-//                        else => @panic("illegal insn!"),
-//                    };
-//                } else @panic("illegal insn!"),
-//                else => @panic("illegal insn!"),
-//            },
-//            2 => dec_stc(T, fetch, getwd, ud),
-//            3 => dec_ldc(T, fetch, getwd, ud),
-//            4 => dec_org(T, fetch, getwd, ud),
-//            5 => dec_xorg(T, fetch, getwd, ud),
-//            6 => dec_andc(T, fetch, getwd, ud),
-//            7 => dec_ldc(T, fetch, getwd, ud),
-//            8, 9 => dec_add(T, fetch, getwd, ud),
-//            0xa => switch ((fetch >> 4) & 0xf) {
-//                0 => dec_inc(T, fetch, getwd, ud),
-//                8..0xf => dec_add(T, fetch, getwd, ud),
-//                else => @panic("illegal insn!"),
-//            },
-//            0xb => switch ((fetch >> 4) & 0xf) {
-//                0,8,9 => dec_adds(T, fetch, getwd, ud),
-//                5,7,0xd,0xf => dec_inc(T, fetch, getwd, ud),
-//                else => @panic("illegal insn!"),
-//            },
-//            0xc,0xd => dec_mov(T, fetch, getwd, ud),
-//            0xe => dec_addx(T, fetch, getwd, ud),
-//            0xf => switch ((fetch >> 4) & 0xf) {
-//                0 => dec_daa(T, fetch, getwd, ud),
-//                8..0xf => dec_mov(T, fetch, getwd, ud),
-//                else => @panic("illegal insn!"),
-//            },
-//            else => @panic("wtf"),
-//        },
-//        1 => switch ((fetch >> 8) & 0xf) {
-//            0 => switch ((fetch >> 4) & 0xf) {
-//                0,1,3  => dec_shll(T, fetch, getwd, ud),
-//                8,9,11 => dec_shal(T, fetch, getwd, ud),
-//                else => @panic("illegal insn!"),
-//            },
-//            1 => switch ((fetch >> 4) & 0xf) {
-//                0,1,3  => dec_shlr(T, fetch, getwd, ud),
-//                8,9,11 => dec_shar(T, fetch, getwd, ud),
-//                else => @panic("illegal insn!"),
-//            },
-//            2 => switch ((fetch >> 4) & 0xf) {
-//                0,1,3  => dec_rotxl(T, fetch, getwd, ud),
-//                8,9,11 => dec_rotl(T, fetch, getwd, ud),
-//                else => @panic("illegal insn!"),
-//            },
-//            3 => switch ((fetch >> 4) & 0xf) {
-//                0,1,3  => dec_rotxr(T, fetch, getwd, ud),
-//                8,9,11 => dec_rotr(T, fetch, getwd, ud),
-//                else => @panic("illegal insn!"),
-//            },
-//            4 => dec_orb(T, fetch, getwd, ud),
-//            5 => dec_xorb(T, fetch, getwd, ud),
-//            6 => dec_andb(T, fetch, getwd, ud),
-//            7 => switch ((fetch >> 4) & 0xf) {
-//                0,1,3 => dec_not(T, fetch, getwd, ud),
-//                5,7 => dec_extu(T, fetch, getwd, ud),
-//                8,9,11 => dec_neg(T, fetch, getwd, ud),
-//                13,15 => dec_exts(T, fetch, getwd, ud),
-//                else => @panic("illegal insn!"),
-//            },
-//            8 => dec_subb(T, fetch, getwd, ud),
-//            9 => dec_subw(T, fetch, getwd, ud),
-//            0xa => switch ((fetch >> 4) & 0xf) {
-//                0 => dec_dec(T, fetch, getwd, ud),
-//                8..15 => dec_sub(T, fetch, getwd, ud),
-//                else => @panic("illegal insn!"),
-//            },
-//            0xb => switch ((fetch >> 4) & 0xf) {
-//                0 => dec_subs(T, fetch, getwd, ud),
-//                5,7,13,15 => dec_dec(T, fetch, getwd, ud),
-//                8,9 => dec_sub(T, fetch, getwd, ud),
-//                else => @panic("illegal insn!"),
-//            },
-//            0xc,0xd => dec_cmp(T, fetch, getwd, ud),
-//            0xe => dec_subx(T, fetch, getwd, ud),
-//            0xf => switch ((fetch >> 4) & 0xf) {
-//                0 => dec_das(T, fetch, getwd, ud),
-//                8..15 => dec_cmp(T, fetch, getwd, ud),
-//                else => @panic("illegal insn!"),
-//            },
-//            else => @panic("wtf"),
-//        },
-//        2, 3 => dec_movb(T, fetch, getwd, ud),
-//        4 => dec_bcc(T, fetch, getwd, ud),
-//        5 => switch ((fetch >> 8) & 0xf) {
-//            0 => dec_mulxub(T, fetch, getwd, ud),
-//            1 => dec_divxub(T, fetch, getwd, ud),
-//            2 => dec_mulxuw(T, fetch, getwd, ud),
-//            3 => dec_divxuw(T, fetch, getwd, ud),
-//            4 => .rts,
-//            5,0xc => dec_bsr(T, fetch, getwd, ud),
-//            6 => .rte,
-//            7 => dec_trapa(T, fetch, getwd, ud),
-//            8 => dec_bcc(T, fetch, getwd, ud),
-//            0x9,0xa,0xb => dec_jmp(T, fetch, getwd, ud),
-//            0xd,0xe,0xf => dec_jsr(T, fetch, getwd, ud),
-//            else => @panic("wtf"),
-//        },
-//        6 => switch ((fetch >> 8) & 0xf) {
-//            0 => dec_bset(T, fetch, getwd, ud),
-//            1 => dec_bnot(T, fetch, getwd, ud),
-//            2 => dec_bclr(T, fetch, getwd, ud),
-//            3 => dec_btst(T, fetch, getwd, ud),
-//            4 => dec_orw(T, fetch, getwd, ud),
-//            5 => dec_xorw(T, fetch, getwd, ud),
-//            6 => dec_andw(T, fetch, getwd, ud),
-//            7 => dec_bst(T, fetch, getwd, ud),
-//            else => dec_mov(T, fetch, getwd, ud),
-//        },
-//        7 => switch ((fetch >> 8) & 0xf) {
-//            0 => dec_bset(T, fetch, getwd, ud),
-//            1 => dec_bnot(T, fetch, getwd, ud),
-//            2 => dec_bclr(T, fetch, getwd, ud),
-//            3 => dec_btst(T, fetch, getwd, ud),
-//            4 => dec_bor(T, fetch, getwd, ud),
-//            5 => dec_bxor(T, fetch, getwd, ud),
-//            6 => dec_band(T, fetch, getwd, ud),
-//            7 => dec_bld(T, fetch, getwd, ud),
-//            8 => dec_mov(T, fetch, getwd, ud),
-//            9,0xa => switch ((fetch >> 8) & 0xf) {
-//                0 => dec_mov(T, fetch, getwd, ud),
-//                1 => dec_add(T, fetch, getwd, ud),
-//                2 => dec_cmp(T, fetch, getwd, ud),
-//                3 => dec_sub(T, fetch, getwd, ud),
-//                4 => dec_or(T, fetch, getwd, ud),
-//                5 => dec_xor(T, fetch, getwd, ud),
-//                6 => dec_and(T, fetch, getwd, ud),
-//                else => @panic("wtf"),
-//            },
-//            0xb => dec_eepmov(T, fetch, getwd, ud),
-//            0xc,0xe => if ((fetch & 0xf) == 0 || ((fetch >> 8) & 0xf) == 0xe) blk: {
-//                const cd = getwd(ud);
-//                break :blk switch ((cd >> 8) & 0xff) {
-//                    0x63,0x73 => // TODO: btst
-//                    0x74 => // TODO: bor/bior
-//                    0x75 => // TODO: bxor/bixor
-//                    0x76 => // TODO: band/biand
-//                    0x77 => // TODO: bld/bild
-//                    else => @panic("illegal insn!"),
-//                };
-//            } else @panic("illegal insn!"),
-//            0xd,0xf => if ((fetch & 0xf) == 0 || ((fetch >> 8) & 0xf) == 0xf) blk: {
-//                const cd = getwd(ud);
-//                break :blk switch ((cd >> 8) & 0xff) {
-//                    0x60,0x70 => // TODO: bset
-//                    0x61,0x71 => // TODO: bnot
-//                    0x62,0x72 => // TODO: bclr
-//                    0x67 => // TODO: bst/bist
-//                    else => @panic("illegal insn!"),
-//                };
-//            } else @panic("illegal insn!"),
-//            else => @panic("wtf"),
-//        },
-//        8 => dec_add(T, fetch, getwd, ud),
-//        9 => dec_addx(T, fetch, getwd, ud),
-//        0xa => dec_cmp(T, fetch, getwd, ud),
-//        0xb => dec_subx(T, fetch, getwd, ud),
-//        0xc => dec_or(T, fetch, getwd, ud),
-//        0xd => dec_xor(T, fetch, getwd, ud),
-//        0xe => dec_and(T, fetch, getwd, ud),
-//        0xf => dec_mov(T, fetch, getwd, ud),
-//        else => @panic("wtf"),
-//    };
 

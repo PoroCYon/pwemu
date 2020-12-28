@@ -3,8 +3,27 @@ const std = @import("std");
 const print = std.debug.print;
 
 const interp = @import("h8300h/interp.zig");
+const insn = @import("h8300h/insn.zig");
 
 usingnamespace @import("h838606f.zig");
+
+pub const State = enum {
+    reset, exec, exn, bus, sleep, sw_standby, hw_standby
+};
+pub const CCR = enum(u8) { // TODO: flags enum?
+    none = 0,
+    i = 1<<7, ui= 1<<6, h = 1<<5, u = 1<<4,
+    n = 1<<3, z = 1<<2, v = 1<<1, c = 1<<0,
+    _
+};
+pub const PendingExn = enum(u64) { // TODO: flags enum?
+    none = 0,
+
+    rst = 1<<0, nmi = 1<<7, trp0 = 1<<8, trp1 = 1<<9,
+    trp2 = 1<<10, trp3 = 1<<11, slp = 1<<13,
+    // TODO: irq0/irq1/irqaec, all other interrupts!
+    irq = 1<<16 // check irr/irr2
+};
 
 pub const H8300H = struct {
     sys: *H838606F,
@@ -24,11 +43,6 @@ pub const H8300H = struct {
             .{self.reg[4],self.reg[5],self.reg[6],self.reg[7]});
     }
 
-    inline fn sp(self: *H8300H) u16 { return @truncate(u16, self.reg[7]); }
-    inline fn ssp(self: *H8300H, nsp: u16) void {
-        self.reg[7] = (self.reg[7] & 0xffff0000) | @as(u32, nsp);
-    }
-
     pub fn init(s: *H838606F) H8300H {
         return H8300H { .sys = s, .pc = 0, .ccr = .i, .reg = undefined,
             .state = .reset, .pending = .rst, .fetch = 0
@@ -43,22 +57,6 @@ pub const H8300H = struct {
 
     pub inline fn cycle(self: *H8300H, c: u64) void { self.sys.sched.cycle(c); }
     pub inline fn skip(self: *H8300H) void { self.sys.sched.skip(); }
-
-    pub const State = enum {
-        reset, exec, exn, bus, sleep, sw_standby, hw_standby
-    };
-    pub const CCR = enum(u8) { // TODO: flags enum?
-        i = 1<<7, ui= 1<<6, h = 1<<5, u = 1<<4,
-        n = 1<<3, z = 1<<2, v = 1<<1, c = 1<<0
-    };
-    pub const PendingExn = enum(u64) { // TODO: flags enum?
-        none = 0,
-
-        rst = 1<<0, nmi = 1<<7, trp0 = 1<<8, trp1 = 1<<9,
-        trp2 = 1<<10, trp3 = 1<<11, slp = 1<<13,
-        // TODO: irq0/irq1/irqaec, all other interrupts!
-        irq = 1<<16 // check irr/irr2
-    };
 
     // TODO: correct address cycle timing!
     // RAM, ROM: 16-bit bus, 2 cycles
@@ -107,7 +105,7 @@ pub const H8300H = struct {
                 // TODO: unclear if internal irqs are edge- or level-triggered,
                 //               and how to reset them if it's the latter case
                 //               // might even be case-by-case???
-                self.pending = @intToEnum(PendingExn, @enumToInt(self.pending) ^ (@as(u64, 1) << i));
+                self.xorp(@intToEnum(PendingExn, @as(u64, 1) << i));
                 break;
             }
         }
@@ -145,24 +143,28 @@ pub const H8300H = struct {
         _ = self.read16(evtaddr); // discarded fsr
         self.cycle(2);
 
-        self.write16(self.sp() - 2, self.pc);
+        self.write16(self.gsp() -% 2, self.pc);
         const ccru8 = @as(u8, @enumToInt(self.ccr));
-        self.write16(self.sp() - 4, @as(u16, ccru8) | (@as(u16, ccru8) << 8));
-        self.ssp(self.sp() + 4);
+        self.write16(self.gsp() -% 4, @as(u16, ccru8) | (@as(u16, ccru8) << 8));
+        self.ssp(self.gsp() +% 4);
 
         self.pc = self.read16(evtaddr);
 
-        self.ccr = @intToEnum(CCR, @enumToInt(self.ccr) | @enumToInt(CCR.i));
-        self.fetch = self.read16(self.pc); self.pc += 2;
+        self.orc(.i);
+        self.fetch = self.read16(self.pc); self.pc +%= 2;
 
         self.state = .exec;
     }
 
     fn handle_exec(self: *H8300H) void {
         // TODO: if ldc(/stc?), do NOT go to exn state! AT ALL!
+        if (self.pending != .none) {
+            self.state = .exn; // !
+            return;
+        }
         //const insnlw = self.fetch;
 
-        //self.fetch = self.read16(self.pc); self.pc += 2; // part if exec
+        //self.fetch = self.read16(self.pc); self.pc += 2; // part of exec
         interp.exec(self);
     }
 
@@ -172,8 +174,8 @@ pub const H8300H = struct {
                 .reset => {
                     self.pc = self.read16(0x0000);
                     print("pc = 0x{x:04}, going rst->exec now...\n", .{self.pc});
-                    self.fetch = self.read16(self.pc); self.pc += 2;
-                    self.pending = @intToEnum(PendingExn, @enumToInt(self.pending) ^ @enumToInt(PendingExn.rst));
+                    self.fetch = self.read16(self.pc); self.pc +%= 2;
+                    //self.orp(.rst);
                     self.state = .exec;
                 },
                 .exn => {
@@ -202,6 +204,166 @@ pub const H8300H = struct {
                 }
             }
         }
+    }
+
+    // yuck yuck yuck yuck yuck
+    pub inline fn setc(self: *H8300H, mask: CCR, val: CCR) void {
+        self.ccr = @intToEnum(CCR, ((~@enumToInt(mask))&@enumToInt(self.ccr))|(@enumToInt(val)&@enumToInt(mask)));
+    }
+    pub inline fn andc(self: *H8300H, f: CCR) void {
+        self.ccr = @intToEnum(CCR, @enumToInt(f)&@enumToInt(self.ccr));
+    }
+    pub inline fn andnc(self: *H8300H, f: CCR) void {
+        self.ccr = @intToEnum(CCR, (~@enumToInt(f))&@enumToInt(self.ccr));
+    }
+    pub inline fn orc(self: *H8300H, f: CCR) void {
+        self.ccr = @intToEnum(CCR, @enumToInt(f)|@enumToInt(self.ccr));
+    }
+    pub inline fn xorc(self: *H8300H, f: CCR) void {
+        self.ccr = @intToEnum(CCR, @enumToInt(f)^@enumToInt(self.ccr));
+    }
+    pub inline fn hasc(self: *H8300H, f: CCR) bool {
+        return (@enumToInt(self.ccr) & @enumToInt(f)) != 0;
+    }
+
+    pub inline fn setp(self: *H8300H, mask: PendingExn, val: PendingExn) void {
+        self.pending = @intToEnum(PendingExn, ((~@enumToInt(mask))&@enumToInt(self.pending))|(@enumToInt(val)&@enumToInt(mask)));
+    }
+    pub inline fn andp(self: *H8300H, f: PendingExn) void {
+        self.pending = @intToEnum(PendingExn, @enumToInt(f)&@enumToInt(self.pending));
+    }
+    pub inline fn andnp(self: *H8300H, f: PendingExn) void {
+        self.pending = @intToEnum(PendingExn, (~@enumToInt(f))&@enumToInt(self.pending));
+    }
+    pub inline fn orp(self: *H8300H, f: PendingExn) void {
+        self.pending = @intToEnum(PendingExn, @enumToInt(f)|@enumToInt(self.pending));
+    }
+    pub inline fn xorp(self: *H8300H, f: PendingExn) void {
+        self.pending = @intToEnum(PendingExn, @enumToInt(f)^@enumToInt(self.pending));
+    }
+    pub inline fn hasp(self: *H8300H, f: PendingExn) bool {
+        return (@enumToInt(self.pending) & @enumToInt(f)) != 0;
+    }
+
+    const isle = comptime std.Target.current.cpu.arch.endian() == .Little;
+    const isbe = comptime std.Target.current.cpu.arch.endian() == .Big;
+    const doptr = true and (isle or isbe);
+
+    pub inline fn grh(self: *H8300H, i: anytype) u8 {
+        if (doptr and !isle and !isbe) @compileError("um, better check your stuff");
+
+        if (doptr) {
+            if (isle) {
+                return @ptrCast([*]u8, &self.reg[i])[1];
+            } else if (isbe) {
+                @ptrCast([*]u8, &self.reg[i])[2];
+            } else unreachable;
+        } else return @truncate(u8, self.reg[i] >> 8);
+    }
+    pub inline fn srh(self: *H8300H, i: anytype, nv: u8) void {
+        if (doptr) {
+            if (isle) {
+                @ptrCast([*]u8, &self.reg[i])[1] = nv;
+            } else if (isbe) {
+                @ptrCast([*]u8, &self.reg[i])[2] = nv;
+            } else unreachable;
+        } else self.reg[i] = (self.reg[i] & 0xffff00ff) | (@as(u32, nv) << 8);
+    }
+    pub inline fn grl(self: *H8300H, i: anytype) u8 {
+        if (doptr) {
+            if (isle) {
+                return @ptrCast([*]u8, &self.reg[i])[0];
+            } else if (isbe) {
+                return @ptrCast([*]u8, &self.reg[i])[3];
+            } else unreachable;
+        } else return @truncate(u8, self.reg[i] >> 0);
+    }
+    pub inline fn srl(self: *H8300H, i: anytype, nv: u8) void {
+        if (doptr) {
+            if (isle) {
+                @ptrCast([*]u8, &self.reg[i])[0] = nv;
+            } else if (isbe) {
+                @ptrCast([*]u8, &self.reg[i])[3] = nv;
+            } else unreachable;
+        } else self.reg[i] = (self.reg[i] & 0xffffff00) | (@as(u32, nv) << 0);
+    }
+    pub inline fn gr(self: *H8300H, i: anytype) u16 {
+        if (doptr) {
+            if (isle) {
+                return @ptrCast([*]u16, &self.reg[i])[0];
+            } else if (isbe) {
+                return @ptrCast([*]u16, &self.reg[i])[1];
+            } else unreachable;
+        } else return @truncate(u16, self.reg[i] >> 00);
+    }
+    pub inline fn sr(self: *H8300H, i: anytype, nv: u16) void {
+        if (doptr) {
+            if (isle) {
+                @ptrCast([*]u16, &self.reg[i])[0] = nv;
+            } else if (isbe) {
+                @ptrCast([*]u16, &self.reg[i])[1] = nv;
+            } else unreachable;
+        } else self.reg[i] = (self.reg[i] & 0xffff0000) | (@as(u32, nv) << 00);
+    }
+    pub inline fn ge(self: *H8300H, i: anytype) u16 {
+        if (doptr) {
+            if (isle) {
+                return @ptrCast([*]u16, &self.reg[i])[1];
+            } else if (isbe) {
+                return @ptrCast([*]u16, &self.reg[i])[0];
+            } else unreachable;
+        } else return @truncate(u16, self.reg[i] >> 16);
+    }
+    pub inline fn se(self: *H8300H, i: anytype, nv: u16) void {
+        if (doptr) {
+            if (isle) {
+                @ptrCast([*]u16, &self.reg[i])[1] = nv;
+            } else if (isbe) {
+                @ptrCast([*]u16, &self.reg[i])[0] = nv;
+            } else unreachable;
+        } else self.reg[i] = (self.reg[i] & 0x0000ffff) | (@as(u32, nv) << 16);
+    }
+
+    pub inline fn gsp(self: *H8300H) u16 { return self.gr(7); }
+    pub inline fn ssp(self: *H8300H, nsp: u16) void { self.sr(7, nsp); }
+
+    pub inline fn ghl(self: *H8300H, o: insn.OpRnHL) u8 {
+        const i = @enumToInt(o);
+        if ((i & 8) == 0) { // h
+            return self.grh(i & 7);
+        } else { // l
+            return self.grl(i & 7);
+        }
+    }
+    pub inline fn shl(self: *H8300H, o: insn.OpRnHL, v: u8) void {
+        const i = @enumToInt(o);
+        if ((i & 8) == 0) { // h
+            self.srh(i & 7, v);
+        } else { // l
+            self.srl(i & 7, v);
+        }
+    }
+    pub inline fn grn(self: *H8300H, o: insn.OpRn) u16 {
+        const i = @enumToInt(o);
+        if ((i & 8) == 0) { // r
+            return self.gr(i & 7);
+        } else { // e
+            return self.ge(i & 7);
+        }
+    }
+    pub inline fn srn(self: *H8300H, o: insn.OpRn, v: u16) void {
+        const i = @enumToInt(o);
+        if ((i & 8) == 0) { // r
+            self.sr(i & 7, v);
+        } else { // e
+            self.se(i & 7, v);
+        }
+    }
+    pub inline fn ger(self: *H8300H, i: insn.OpERn) u32 {
+        return self.reg[@enumToInt(i)];
+    }
+    pub inline fn ser(self: *H8300H, i: insn.OpERn, nv: u32) void {
+        self.reg[@enumToInt(i)] = nv;
     }
 };
 

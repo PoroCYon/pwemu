@@ -440,6 +440,18 @@ test "no_overlapping_isns" {
 inline fn decodeN(comptime M: comptime_int, comptime n: comptime_int,
         comptime tbl: [M]Row(n), iwds: []const u16) ?Insn {
     // TODO: better than just linear search
+    if (n == 1) {
+        // hackily skip to multibyte ones if possible
+        const msb = iwds[0] & 0xff00;
+
+        if ((msb >= 0x7900 and msb <= 0x7f00) // several bit ops
+            or (msb == 0x0100 and (iwds[0] & 0x80) == 0x80) // arth. stuff (0x0180 == sleep)
+            or (msb == 0x6a00 or msb == 0x6b00 or msb == 0x6e00 or msb == 0x6f00) // several movs
+        ) {
+            return null; // skip bc lol
+        }
+    }
+
     inline for (tbl) |row| {
         var match = true;
 
