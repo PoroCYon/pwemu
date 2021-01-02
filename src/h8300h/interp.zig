@@ -1418,6 +1418,8 @@ fn handle_exts_w(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) vo
     const bit = @truncate(u1, (x & 0x80) >> 7);
     const v = (x & 0xff) | (0xff00 * @as(u16,bit));
     self.srn(oands, v);
+    flg_logic(u16, self, v);
+    self.setc(.v, .none);
 
     next(self);
     print("handler for exts_w\n", .{});
@@ -1428,6 +1430,8 @@ fn handle_exts_l(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) vo
     const bit = @truncate(u1, (x & 0x8000) >> 15);
     const v = (x & 0xffff) | (0xffff0000 * @as(u32,bit));
     self.ser(oands, v);
+    flg_logic(u32, self, v);
+    self.setc(.v, .none);
 
     print("handler for exts_l\n", .{});
     insn.display();
@@ -1436,6 +1440,8 @@ fn handle_extu_w(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) vo
     const x = self.grn(oands);
     const v = (x & 0xff);
     self.srn(oands, v);
+    self.andc(@intToEnum(CCR, 0xd0|36)); // i, u, ui, h, c
+    if (v == 0) self.orc(.z);
 
     next(self);
     print("handler for extu_w\n", .{});
@@ -1445,6 +1451,8 @@ fn handle_extu_l(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) vo
     const x = self.ger(oands);
     const v = (x & 0xff);
     self.ser(oands, v);
+    self.andc(@intToEnum(CCR, 0xd0|36)); // i, u, ui, h, c
+    if (v == 0) self.orc(.z);
 
     next(self);
     print("handler for extu_l\n", .{});
@@ -1484,58 +1492,174 @@ fn handle_inc_l(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) voi
     insn.display();
 }
 fn handle_jmp_Mern(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const m = @truncate(u16, self.ger(oands));
+    const a = m;//self.read16(m); // TODO: which of the two?
+    self.pc = a;
+    next(self); // TODO: required here, though kinda off-spec... IF doing PC=Mem[ERn]! OK if PC=ERn
+
     print("handler for jmp_Mern\n", .{});
     insn.display();
+    @panic("checkme");
 }
 fn handle_jmp_abs24(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+    self.cycle(2);
+
+    const m = @truncate(u16, oands);
+    const a = m;//self.read16(m); // TODO: is this a direct immediate, or indirect?
+    self.pc = a;
+    next(self);
+
     print("handler for jmp_abs24\n", .{});
     insn.display();
+    @panic("checkme");
 }
 fn handle_jmp_MMabs8(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const m = @as(u16, oands);
+    const a = self.read16(m);
+
+    self.cycle(2);
+
+    self.pc = a;
+    next(self);
+
     print("handler for jmp_MMabs8\n", .{});
     insn.display();
 }
 fn handle_jsr_Mern(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const p = self.pc;
+    const m = @truncate(u16, self.ger(oands));
+    const a = m;//self.read16(m); // TODO: which of the two?
+    self.pc = a;
+    next(self); // TODO: required here, though kinda off-spec... IF doing PC=Mem[ERn]! OK if PC=ERn
+
+    const s = self.gsp() -% 2;
+    self.ssp(s);
+    self.write16(s, p);
+
     print("handler for jsr_Mern\n", .{});
     insn.display();
+    @panic("checkme");
 }
 fn handle_jsr_abs24(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+    self.cycle(2);
+
+    const p = self.pc;
+    const m = @truncate(u16, oands);
+    const a = m;//self.read16(m); // TODO: is this a direct immediate, or indirect?
+    self.pc = a;
+    next(self);
+
+    const s = self.gsp() -% 2;
+    self.ssp(s);
+    self.write16(s, p);
+
     print("handler for jsr_abs24\n", .{});
     insn.display();
+    @panic("checkme");
 }
 fn handle_jsr_MMabs8(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const p = self.pc;
+    const m = @as(u16, oands);
+    const a = self.read16(m);
+
+    const s = self.gsp() -% 2;
+    self.ssp(s);
+    self.write16(s, p);
+
+    self.pc = a;
+    next(self);
+
     print("handler for jsr_MMabs8\n", .{});
     insn.display();
 }
 fn handle_ldc_b_imm(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    //finf(self, raw);
+
+    self.ccr = @intToEnum(CCR, oands);
+
+    next(self);
     print("handler for ldc_b_imm\n", .{});
     insn.display();
 }
 fn handle_ldc_b_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    //finf(self, raw);
+
+    self.ccr = @intToEnum(CCR, self.ghl(oands));
+
+    next(self);
     print("handler for ldc_b_rn\n", .{});
     insn.display();
 }
 fn handle_ldc_w_Mern(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+    next(self);
+
+    const v = self.read16(@truncate(u16, self.ger(oands)));
+    self.ccr = @intToEnum(CCR, @truncate(u8, v));
+
     print("handler for ldc_w_Mern\n", .{});
     insn.display();
 }
 fn handle_ldc_w_d16(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+    next(self);
+
+    const v = self.read16(oands.a +% @truncate(u16, self.ger(oands.b)));
+    self.ccr = @intToEnum(CCR, @truncate(u8, v));
+
     print("handler for ldc_w_d16\n", .{});
     insn.display();
 }
 fn handle_ldc_w_d24(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+    next(self);
+
+    const v = self.read16(@truncate(u16, @as(u32, oands.a) +% self.ger(oands.b)));
+    self.ccr = @intToEnum(CCR, @truncate(u8, v));
+
     print("handler for ldc_w_d24\n", .{});
     insn.display();
 }
 fn handle_ldc_w_Mern_inc(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+    next(self);
+
+    const v = self.read16(@truncate(u16, self.ger(oands)));
+    self.ccr = @intToEnum(CCR, @truncate(u8, v));
+
+    self.cycle(2);
+    self.ser(oands, self.ger(oands) +% 2);
+
     print("handler for ldc_w_Mern_inc\n", .{});
     insn.display();
 }
 fn handle_ldc_w_abs16(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+    next(self);
+
+    const v = self.read16(oands);
+    self.ccr = @intToEnum(CCR, @truncate(u8, v));
+
     print("handler for ldc_w_abs16\n", .{});
     insn.display();
 }
 fn handle_ldc_w_abs24(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+    next(self);
+
+    const v = self.read16(@truncate(u16, oands));
+    self.ccr = @intToEnum(CCR, @truncate(u8, v));
+
     print("handler for ldc_w_abs24\n", .{});
     insn.display();
 }
