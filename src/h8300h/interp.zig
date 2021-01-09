@@ -1694,236 +1694,441 @@ fn handle_mov_w_imm_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u
 fn handle_mov_l_imm_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_l_imm_rn\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_b_Mern_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_b_Mern_rn\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_w_Mern_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_w_Mern_rn\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_l_Mern_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_l_Mern_rn\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_b_d16_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_b_d16_rn\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_w_d16_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_w_d16_rn\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_l_d16_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_l_d16_rn\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_b_d24_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_b_d24_rn\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_w_d24_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_w_d24_rn\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_l_d24_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_l_d24_rn\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_b_Mern_inc_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_b_Mern_inc_rn\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_w_Mern_inc_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_w_Mern_inc_rn\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_l_Mern_inc_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_l_Mern_inc_rn\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_b_abs8_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_b_abs8_rn\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_b_abs16_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_b_abs16_rn\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_w_abs16_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_w_abs16_rn\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_l_abs16_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_l_abs16_rn\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_b_abs24_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_b_abs24_rn\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_w_abs24_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_w_abs24_rn\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_l_abs24_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_l_abs24_rn\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_b_rn_Mern(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_b_rn_Mern\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_w_rn_Mern(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_w_rn_Mern\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_l_rn_Mern(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_l_rn_Mern\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_b_rn_d16(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_b_rn_d16\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_w_rn_d16(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_w_rn_d16\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_l_rn_d16(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_l_rn_d16\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_b_rn_d24(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_b_rn_d24\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_w_rn_d24(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_w_rn_d24\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_l_rn_d24(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_l_rn_d24\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_b_rn_Mern_dec(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_b_rn_Mern_dec\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_w_rn_Mern_dec(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_w_rn_Mern_dec\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_l_rn_Mern_dec(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_l_rn_Mern_dec\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_b_rn_abs8(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_b_rn_abs8\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_b_rn_abs16(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_b_rn_abs16\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_w_rn_abs16(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_w_rn_abs16\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_l_rn_abs16(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_l_rn_abs16\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_b_rn_abs24(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_b_rn_abs24\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_w_rn_abs24(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_w_rn_abs24\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mov_l_rn_abs24(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_l_rn_abs24\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_movfpe(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for movfpe\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_movtpe(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for movtpe\n", .{});
     insn.display();
+    @panic("not implemented!");
 }
 fn handle_mulxs_b(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+    next(self);
+
+    const a = self.ghl(oands.a); // rs
+    const b = self.grn(oands.b); // rd
+
+    const prod = @as(i16,@bitCast(i8, @truncate(u8, b))) * @as(i16,@bitCast(i8, a));
+
+    self.srn(oands.b, @bitCast(u16, prod));
+    self.setc(.n, if (prod <  0) .n else .none);
+    self.setc(.z, if (prod == 0) .z else .none);
+
+    self.cycle(12);
+
     print("handler for mulxs_b\n", .{});
     insn.display();
 }
 fn handle_mulxs_w(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+    next(self);
+
+    const a = self.grn(oands.a); // rs
+    const b = self.ger(oands.b); // rd
+
+    const prod = @as(i32,@bitCast(i16,@truncate(u16,b))) * @as(i32,@bitCast(i16,a));
+
+    self.srn(oands.b, @bitCast(u32, prod));
+    self.setc(.n, if (prod <  0) .n else .none);
+    self.setc(.z, if (prod == 0) .z else .none);
+
+    self.cycle(20);
+
     print("handler for mulxs_w\n", .{});
     insn.display();
 }
 fn handle_mulxu_b(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const a = self.ghl(oands.a); // rs
+    const b = self.grn(oands.b); // rd
+
+    const prod = @as(u16, @as(u16,@truncate(u8, b)) * @as(u16, a));
+
+    self.srn(oands.b, prod);
+
+    self.cycle(12);
+
     print("handler for mulxu_b\n", .{});
     insn.display();
 }
 fn handle_mulxu_w(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const a = self.grn(oands.a); // rs
+    const b = self.ger(oands.b); // rd
+
+    const prod = @as(u32, @as(u32,@truncate(u16, b)) * @as(u32, a));
+
+    self.srn(oands.b, prod);
+
     print("handler for mulxu_w\n", .{});
     insn.display();
 }
 fn handle_neg_b(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const a = self.ghl(oands);
+    const n = ~a +% 1;
+
+    flag_arith(u8, self, ~a, 1, n, false);
+    self.shl(oands, n);
+
     print("handler for neg_b\n", .{});
     insn.display();
 }
 fn handle_neg_w(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const a = self.grn(oands);
+    const n = ~a +% 1;
+
+    flag_arith(u16, self, ~a, 1, n, false);
+    self.srn(oands, n);
+
     print("handler for neg_w\n", .{});
     insn.display();
 }
 fn handle_neg_l(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const a = self.ger(oands);
+    const n = ~a +% 1;
+
+    flag_arith(u32, self, ~a, 1, n, false);
+    self.ser(oands, n);
+
     print("handler for neg_l\n", .{});
     insn.display();
 }
 fn handle_nop(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
     print("handler for nop\n", .{});
     insn.display();
 }
 fn handle_not_b(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const a = self.ghl(oands);
+    const n = ~a;
+
+    flag_logic(u8, self, n);
+    self.shl(oands, n);
+
     print("handler for not_b\n", .{});
     insn.display();
 }
 fn handle_not_w(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const a = self.grn(oands);
+    const n = ~a;
+
+    flag_logic(u16, self, n);
+    self.srn(oands, n);
+
     print("handler for not_w\n", .{});
     insn.display();
 }
 fn handle_not_l(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const a = self.ger(oands);
+    const n = ~a;
+
+    flag_logic(u32, self, n);
+    self.ser(oands, n);
+
     print("handler for not_l\n", .{});
     insn.display();
 }
 fn handle_or_b_imm(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    //finf(self, raw);
+
+    const a = oands.a;
+    const b = self.ghl(oands.b);
+    const r = a | b;
+    self.shl(oands.b, r);
+    flg_logic(u8, self, r);
+
+    next(self);
+
     print("handler for or_b_imm\n", .{});
     insn.display();
 }
 fn handle_or_w_imm(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+
+    const a = oands.a;
+    const b = self.grn(oands.b);
+    const r = a | b;
+    self.srn(oands.b, r);
+    flg_logic(u16, self, r);
+
+    next(self);
+
     print("handler for or_w_imm\n", .{});
     insn.display();
 }
 fn handle_or_l_imm(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+
+    const a = oands.a;
+    const b = self.ger(oands.b);
+    const r = a | b;
+    self.ser(oands.b, r);
+    flg_logic(u32, self, r);
+
+    next(self);
+
     print("handler for or_l_imm\n", .{});
     insn.display();
 }
 fn handle_or_b_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    //finf(self, raw);
+
+    const a = self.ghl(oands.a);
+    const b = self.ghl(oands.b);
+    const r = a | b;
+    self.shl(oands.b, r);
+    flg_logic(u8, self, r);
+
+    next(self);
+
     print("handler for or_b_rn\n", .{});
     insn.display();
 }
 fn handle_or_w_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+
+    const a = self.grn(oands.a);
+    const b = self.grn(oands.b);
+    const r = a | b;
+    self.srn(oands.b, r);
+    flg_logic(u16, self, r);
+
+    next(self);
+
     print("handler for or_w_rn\n", .{});
     insn.display();
 }
 fn handle_or_l_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+
+    const a = self.ger(oands.a);
+    const b = self.ger(oands.b);
+    const r = a | b;
+    self.ser(oands.b, r);
+    flg_logic(u32, self, r);
+
+    next(self);
+
     print("handler for or_l_rn\n", .{});
     insn.display();
 }
 fn handle_orc(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    //finf(self, raw);
+
+    self.orc(@intToEnum(CCR, oands));
+
+    next(self);
+
     print("handler for orc\n", .{});
     insn.display();
 }
