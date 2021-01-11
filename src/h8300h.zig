@@ -146,7 +146,7 @@ pub const H8300H = struct {
         self.write16(self.gsp() -% 2, self.pc);
         const ccru8 = @as(u8, @enumToInt(self.ccr));
         self.write16(self.gsp() -% 4, @as(u16, ccru8) | (@as(u16, ccru8) << 8));
-        self.ssp(self.gsp() +% 4);
+        self.ssp(self.gsp() -% 4);
 
         self.pc = self.read16(evtaddr);
 
@@ -184,7 +184,14 @@ pub const H8300H = struct {
                     }
                     self.handle_exn();
                 },
-                .exec => self.handle_exec(),
+                .exec => {
+                    if (self.pending != .none) { // shortcut
+                        self.state = .exn;
+                        self.handle_exn();
+                    } else {
+                        self.handle_exec();
+                    }
+                },
                 .bus => {
                     // bus released (to periph): wait until reattach,
                     // then either go to exn or exec?
