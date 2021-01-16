@@ -2150,7 +2150,6 @@ fn handle_rotl_b(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) vo
 
     print("handler for rotl_b\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_rotl_w(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     next(self);
@@ -2162,7 +2161,6 @@ fn handle_rotl_w(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) vo
 
     print("handler for rotl_w\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_rotl_l(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     next(self);
@@ -2174,7 +2172,6 @@ fn handle_rotl_l(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) vo
 
     print("handler for rotl_l\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_rotr_b(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     next(self);
@@ -2186,7 +2183,6 @@ fn handle_rotr_b(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) vo
 
     print("handler for rotr_b\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_rotr_w(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     next(self);
@@ -2198,7 +2194,6 @@ fn handle_rotr_w(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) vo
 
     print("handler for rotr_w\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_rotr_l(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     next(self);
@@ -2210,7 +2205,6 @@ fn handle_rotr_l(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) vo
 
     print("handler for rotr_l\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_rotxl_b(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     next(self);
@@ -2222,7 +2216,6 @@ fn handle_rotxl_b(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) v
 
     print("handler for rotxl_b\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_rotxl_w(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     next(self);
@@ -2234,7 +2227,6 @@ fn handle_rotxl_w(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) v
 
     print("handler for rotxl_w\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_rotxl_l(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     next(self);
@@ -2246,7 +2238,6 @@ fn handle_rotxl_l(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) v
 
     print("handler for rotxl_l\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_rotxr_b(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     next(self);
@@ -2258,7 +2249,6 @@ fn handle_rotxr_b(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) v
 
     print("handler for rotxr_b\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_rotxr_w(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     next(self);
@@ -2270,7 +2260,6 @@ fn handle_rotxr_w(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) v
 
     print("handler for rotxr_w\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_rotxr_l(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     next(self);
@@ -2282,7 +2271,6 @@ fn handle_rotxr_l(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) v
 
     print("handler for rotxr_l\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_rte(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     next(self);
@@ -2329,7 +2317,6 @@ fn handle_shal_b(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) vo
 
     print("handler for shal_b\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_shal_w(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     next(self);
@@ -2343,7 +2330,6 @@ fn handle_shal_w(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) vo
 
     print("handler for shal_w\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_shal_l(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     next(self);
@@ -2357,7 +2343,6 @@ fn handle_shal_l(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) vo
 
     print("handler for shal_l\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_shar_b(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     next(self);
@@ -2371,7 +2356,6 @@ fn handle_shar_b(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) vo
 
     print("handler for shar_b\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_shar_w(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     next(self);
@@ -2385,7 +2369,6 @@ fn handle_shar_w(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) vo
 
     print("handler for shar_w\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_shar_l(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     next(self);
@@ -2399,7 +2382,6 @@ fn handle_shar_l(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) vo
 
     print("handler for shar_l\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_shll_b(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     next(self);
@@ -2412,7 +2394,6 @@ fn handle_shll_b(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) vo
 
     print("handler for shll_b\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_shll_w(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     next(self);
@@ -2425,7 +2406,6 @@ fn handle_shll_w(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) vo
 
     print("handler for shll_w\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_shll_l(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     next(self);
@@ -2438,7 +2418,6 @@ fn handle_shll_l(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) vo
 
     print("handler for shll_l\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_shlr_b(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     next(self);
@@ -2452,7 +2431,6 @@ fn handle_shlr_b(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) vo
 
     print("handler for shlr_b\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_shlr_w(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     next(self);
@@ -2466,7 +2444,6 @@ fn handle_shlr_w(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) vo
 
     print("handler for shlr_w\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_shlr_l(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     next(self);
@@ -2480,7 +2457,6 @@ fn handle_shlr_l(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) vo
 
     print("handler for shlr_l\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_sleep(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for sleep\n", .{});
