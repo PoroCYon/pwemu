@@ -2141,61 +2141,145 @@ fn handle_orc(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void 
     insn.display();
 }
 fn handle_rotl_b(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const a = self.ghl(oands);
+    const b = (a << 1) | ((a & 0x80) >> 7);
+    self.shl(oands, @truncate(u8,b));
+    flg_shro(u8, self, a, b, (a&0x80)!=0);
+
     print("handler for rotl_b\n", .{});
     insn.display();
     @panic("not implemented!");
 }
 fn handle_rotl_w(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const a = self.grn(oands);
+    const b = (a << 1) | ((a & 0x8000) >> 15);
+    self.srn(oands, @truncate(u16,b));
+    flg_shro(u16, self, a, b, (a&0x8000)!=0);
+
     print("handler for rotl_w\n", .{});
     insn.display();
     @panic("not implemented!");
 }
 fn handle_rotl_l(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const a = self.ger(oands);
+    const b = (a << 1) | ((a & 0x80000000) >> 31);
+    self.ser(oands, @truncate(u32,b));
+    flg_shro(u32, self, a, b, (a&0x80000000)!=0);
+
     print("handler for rotl_l\n", .{});
     insn.display();
     @panic("not implemented!");
 }
 fn handle_rotr_b(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const a = self.ghl(oands);
+    const b = (a >> 1) | ((a & 1) << 7);
+    self.shl(oands, b);
+    flg_shro(u8, self, a, b, (a&1)!=0);
+
     print("handler for rotr_b\n", .{});
     insn.display();
     @panic("not implemented!");
 }
 fn handle_rotr_w(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const a = self.grn(oands);
+    const b = (a >> 1) | ((a & 1) << 15);
+    self.srn(oands, b);
+    flg_shro(u16, self, a, b, (a&1)!=0);
+
     print("handler for rotr_w\n", .{});
     insn.display();
     @panic("not implemented!");
 }
 fn handle_rotr_l(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const a = self.ger(oands);
+    const b = (a >> 1) | ((a & 1) << 31);
+    self.ser(oands, b);
+    flg_shro(u32, self, a, b, (a&1)!=0);
+
     print("handler for rotr_l\n", .{});
     insn.display();
     @panic("not implemented!");
 }
 fn handle_rotxl_b(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const a = self.ghl(oands);
+    const b = (a << 1) | (if (self.hasc(.c)) @as(u8,1) else 0);
+    self.shl(oands, @truncate(u8,b));
+    flg_shro(u8, self, a, b, (a&0x80)!=0);
+
     print("handler for rotxl_b\n", .{});
     insn.display();
     @panic("not implemented!");
 }
 fn handle_rotxl_w(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const a = self.grn(oands);
+    const b = (a << 1) | (if (self.hasc(.c)) @as(u16,1) else 0);
+    self.srn(oands, @truncate(u16,b));
+    flg_shro(u16, self, a, b, (a&0x8000)!=0);
+
     print("handler for rotxl_w\n", .{});
     insn.display();
     @panic("not implemented!");
 }
 fn handle_rotxl_l(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const a = self.ger(oands);
+    const b = (a << 1) | (if (self.hasc(.c)) @as(u32,1) else 0);
+    self.ser(oands, @truncate(u32,b));
+    flg_shro(u32, self, a, b, (a&0x80000000)!=0);
+
     print("handler for rotxl_l\n", .{});
     insn.display();
     @panic("not implemented!");
 }
 fn handle_rotxr_b(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const a = self.ghl(oands);
+    const b = (a >> 1) | (if (self.hasc(.c)) @as(u8,0x80) else 0);
+    self.shl(oands, b);
+    flg_shro(u8, self, a, b, (a&1)!=0);
+
     print("handler for rotxr_b\n", .{});
     insn.display();
     @panic("not implemented!");
 }
 fn handle_rotxr_w(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const a = self.grn(oands);
+    const b = (a >> 1) | (if (self.hasc(.c)) @as(u16,0x8000) else 0);
+    self.srn(oands, b);
+    flg_shro(u16, self, a, b, (a&1)!=0);
+
     print("handler for rotxr_w\n", .{});
     insn.display();
     @panic("not implemented!");
 }
 fn handle_rotxr_l(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const a = self.ger(oands);
+    const b = (a >> 1) | (if (self.hasc(.c)) @as(u32,0x80000000) else 0);
+    self.ser(oands, b);
+    flg_shro(u32, self, a, b, (a&1)!=0);
+
     print("handler for rotxr_l\n", .{});
     insn.display();
     @panic("not implemented!");
