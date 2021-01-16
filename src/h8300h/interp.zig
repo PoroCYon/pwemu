@@ -89,13 +89,15 @@ pub fn exec(self: *H8300H) void {
     //self.fetch = self.read16(self.pc - 2);
 }
 
+/// finish current insturction fetch
 fn finf(self: *H8300H, raw: []const u16) void {
     var i: usize = 1;
     while (i < raw.len) : (i += 1) {
-        _ = self.read16(self.pc);
+        self.fetch = self.read16(self.pc);
         self.pc += 2;
     }
 }
+/// next instruction fetch start
 inline fn next(self: *H8300H) void {
     self.fetch = self.read16(self.pc);
     self.pc += 2;
@@ -136,6 +138,12 @@ fn flg_shro(comptime T: type, self: *H8300H, d: T, r: T, c: bool) void {
     if ((r >> (@bitSizeOf(T)-1)) != 0) self.orc(.n);
     if (r == 0) self.orc(.z);
     if (c) self.orc(.c);
+}
+/// set n, z according to result, clear v
+fn flg_mov(comptime T: type, self: *H8300H, v: T) void {
+    self.andc(@intToEnum(CCR, 0xf1));
+    if ((v >> (@bitSizeOf(T)-1)) != 0) self.orc(.n);
+    if (v == 0) self.orc(.z);
 }
 
 fn handle_add_b_imm(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
@@ -1672,132 +1680,310 @@ fn handle_ldc_w_abs24(self: *H8300H, insn: Insn, oands: anytype, raw: []const u1
     insn.display();
 }
 fn handle_mov_b_rn_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const v = self.ghl(oands.a);
+    self.shl(oands.b, v);
+    flg_mov(u8, self, v);
+
     print("handler for mov_b_rn_rn\n", .{});
     insn.display();
 }
 fn handle_mov_w_rn_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const v = self.grn(oands.a);
+    self.srn(oands.b, v);
+    flg_mov(u16, self, v);
+
     print("handler for mov_w_rn_rn\n", .{});
     insn.display();
 }
 fn handle_mov_l_rn_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const v = self.ger(oands.a);
+    self.ser(oands.b, v);
+    flg_mov(u32, self, v);
+
     print("handler for mov_l_rn_rn\n", .{});
     insn.display();
 }
 fn handle_mov_b_imm_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const v = oands.a;
+    self.shl(oands.b, v);
+    flg_mov(u8, self, v);
+
     print("handler for mov_b_imm_rn\n", .{});
     insn.display();
 }
 fn handle_mov_w_imm_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
-    const a = oands.a;
-    const b = &self.reg[@enumToInt(oands.b) & 7];
-    if ((@enumToInt(oands.b) & 8) == 1) { // en
-        b.* = (b.* & 0x0000ffff) | (@as(u32,a) << 16);
-    } else {
-        b.* = (b.* & 0xffff0000) | (@as(u32,a) << 00);
-    }
+    finf(self, raw);
+    next(self);
+
+    const v = oands.a;
+    self.srn(oands.b, v);
+    flg_mov(u16, self, v);
 
     print("handler for mov_w_imm_rn\n", .{});
     insn.display();
 }
 fn handle_mov_l_imm_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+    next(self);
+
+    const v = oands.a;
+    self.ser(oands.b, v);
+    flg_mov(u32, self, v);
+
     print("handler for mov_l_imm_rn\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_mov_b_Mern_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const a = @truncate(u16,self.ger(oands.a));
+    const v = self.read8(a);
+    self.shl(oands.b, v);
+    flg_mov(u8, self, v);
+
     print("handler for mov_b_Mern_rn\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_mov_w_Mern_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const a = @truncate(u16,self.ger(oands.a));
+    const v = self.read16(a);
+    self.srn(oands.b, v);
+    flg_mov(u16, self, v);
+
     print("handler for mov_w_Mern_rn\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_mov_l_Mern_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+    next(self);
+
+    const a = @truncate(u16,self.ger(oands.a));
+    const v1 = self.read16(a);
+    const v2 = self.read16(a+2);
+    const v = (@as(u32,v1)<<16)|@as(u32,v2);
+    self.ser(oands.b, v);
+    flg_mov(u32, self, v);
+
     print("handler for mov_l_Mern_rn\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_mov_b_d16_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+    next(self);
+
+    const a = @truncate(u16,self.ger(oands.a2)) +% oands.a1;
+    const v = self.read8(a);
+    self.shl(oands.b, v);
+    flg_mov(u8, self, v);
+
     print("handler for mov_b_d16_rn\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_mov_w_d16_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+    next(self);
+
+    const a = @truncate(u16,self.ger(oands.a2)) +% oands.a1;
+    const v = self.read16(a);
+    self.srn(oands.b, v);
+    flg_mov(u16, self, v);
+
     print("handler for mov_w_d16_rn\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_mov_l_d16_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+    next(self);
+
+    const a = @truncate(u16,self.ger(oands.a2)) +% oands.a1;
+    const v1 = self.read16(a);
+    const v2 = self.read16(a+2);
+    const v = (@as(u32,v1)<<16)|@as(u32,v2);
+    self.ser(oands.b, v);
+    flg_mov(u32, self, v);
+
     print("handler for mov_l_d16_rn\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_mov_b_d24_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+    next(self);
+
+    const a = @truncate(u16,self.ger(oands.a2)) +% @truncate(u16,oands.a1);
+    const v = self.read8(a);
+    self.shl(oands.b, v);
+    flg_mov(u8, self, v);
+
     print("handler for mov_b_d24_rn\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_mov_w_d24_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+    next(self);
+
+    const a = @truncate(u16,self.ger(oands.a2)) +% @truncate(u16,oands.a1);
+    const v = self.read8(a);
+    self.srn(oands.b, v);
+    flg_mov(u16, self, v);
+
     print("handler for mov_w_d24_rn\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_mov_l_d24_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+    next(self);
+
+    const a = @truncate(u16,self.ger(oands.a2)) +% @truncate(u16,oands.a1);
+    const v1 = self.read16(a);
+    const v2 = self.read16(a+2);
+    const v = (@as(u32,v1)<<16)|@as(u32,v2);
+    self.ser(oands.b, v);
+    flg_mov(u32, self, v);
+
     print("handler for mov_l_d24_rn\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_mov_b_Mern_inc_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const a = @truncate(u16,self.ger(oands.a));
+    self.ser(oands.a, self.ger(oands.a) +% 1);
+    self.cycle(2);
+
+    const v = self.read8(a);
+    self.shl(oands.b, v);
+    flg_mov(u8, self, v);
+
     print("handler for mov_b_Mern_inc_rn\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_mov_w_Mern_inc_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const a = @truncate(u16,self.ger(oands.a));
+    self.ser(oands.a, self.ger(oands.a) +% 2);
+    self.cycle(2);
+
+    const v = self.read16(a);
+    self.srn(oands.b, v);
+    flg_mov(u16, self, v);
+
     print("handler for mov_w_Mern_inc_rn\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_mov_l_Mern_inc_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+    next(self);
+
+    const a = @truncate(u16,self.ger(oands.a));
+    self.ser(oands.a, self.ger(oands.a) +% 4);
+    self.cycle(2);
+
+    const v1 = self.read16(a);
+    const v2 = self.read16(a+2);
+    const v = (@as(u32,v1)<<16)|@as(u32,v2);
+    self.ser(oands.b, v);
+    flg_mov(u32, self, v);
+
     print("handler for mov_l_Mern_inc_rn\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_mov_b_abs8_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const a = @as(u16, oands.a) | 0xff00;
+    const v = self.read8(a);
+    self.shl(oands.b, v);
+    flg_mov(u8, self, v);
+
     print("handler for mov_b_abs8_rn\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_mov_b_abs16_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+    next(self);
+
+    const a = oands.a;
+    const v = self.read8(a);
+    self.shl(oands.b, v);
+    flg_mov(u8, self, v);
+
     print("handler for mov_b_abs16_rn\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_mov_w_abs16_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+    next(self);
+
+    const a = oands.a;
+    const v = self.read16(a);
+    self.srn(oands.b, v);
+    flg_mov(u16, self, v);
+
     print("handler for mov_w_abs16_rn\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_mov_l_abs16_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+    next(self);
+
+    const a = oands.a;
+    const v1 = self.read16(a);
+    const v2 = self.read16(a+2);
+    const v = (@as(u32,v1)<<16)|@as(u32,v2);
+    self.ser(oands.b, v);
+    flg_mov(u32, self, v);
+
     print("handler for mov_l_abs16_rn\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_mov_b_abs24_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+    next(self);
+
+    const a = @truncate(u16,oands.a);
+    const v = self.read8(a);
+    self.shl(oands.b, v);
+    flg_mov(u8, self, v);
+
     print("handler for mov_b_abs24_rn\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_mov_w_abs24_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+    next(self);
+
+    const a = @truncate(u16,oands.a);
+    const v = self.read16(a);
+    self.srn(oands.b, v);
+    flg_mov(u16, self, v);
+
     print("handler for mov_w_abs24_rn\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_mov_l_abs24_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    finf(self, raw);
+    next(self);
+
+    const a = @truncate(u16,oands.a);
+    const v1 = self.read16(a);
+    const v2 = self.read16(a+2);
+    const v = (@as(u32,v1)<<16)|@as(u32,v2);
+    self.ser(oands.b, v);
+    flg_mov(u32, self, v);
+
     print("handler for mov_l_abs24_rn\n", .{});
     insn.display();
-    @panic("not implemented!");
 }
 fn handle_mov_b_rn_Mern(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     print("handler for mov_b_rn_Mern\n", .{});
