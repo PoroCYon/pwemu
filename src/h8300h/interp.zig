@@ -129,6 +129,14 @@ fn flg_logic(comptime T: type, self: *H8300H, v: T) void {
     if (v == 0) self.orc(.z);
     if ((v >> (@bitSizeOf(T)-1)) != 0) self.orc(.n);
 }
+/// set n, z, v and maybe c according to the result
+fn flg_shro(comptime T: type, self: *H8300H, d: T, r: T, c: bool) void {
+    self.andc(@intToEnum(CCR, 0xf0));
+
+    if ((r >> (@bitSizeOf(T)-1)) != 0) self.orc(.n);
+    if (r == 0) self.orc(.z);
+    if (c) self.orc(.c);
+}
 
 fn handle_add_b_imm(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     //finf(self, raw);
@@ -2226,61 +2234,166 @@ fn handle_rts(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void 
     insn.display();
 }
 fn handle_shal_b(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const a = self.ghl(oands);
+    const b = a << 1;
+
+    self.shl(oands, @truncate(u8, b));
+    flg_shro(u8, self, a, b, (a&0x80)!=0);
+    if ((((a & 0x80) >> 7) ^ ((a & 0x40) >> 6)) != 0) self.orc(.v);
+
     print("handler for shal_b\n", .{});
     insn.display();
     @panic("not implemented!");
 }
 fn handle_shal_w(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const a = self.grn(oands);
+    const b = a << 1;
+
+    self.srn(oands, @truncate(u16, b));
+    flg_shro(u16, self, a, b, (a&0x8000)!=0);
+    if ((((a & 0x8000) >> 15) ^ ((a & 0x4000) >> 14)) != 0) self.orc(.v);
+
     print("handler for shal_w\n", .{});
     insn.display();
     @panic("not implemented!");
 }
 fn handle_shal_l(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const a = self.ger(oands);
+    const b = a << 1;
+
+    self.ser(oands, @truncate(u32, b));
+    flg_shro(u32, self, a, b, (a&0x80000000)!=0);
+    if ((((a & 0x80000000) >> 31) ^ ((a & 0x40000000) >> 30)) != 0) self.orc(.v);
+
     print("handler for shal_l\n", .{});
     insn.display();
     @panic("not implemented!");
 }
 fn handle_shar_b(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const a = self.ghl(oands);
+    const b = (a >> 1) | (a & 0x80);
+
+    self.shl(oands, a);
+    flg_shro(u8, self, a, b, (a&1)!=0);
+    // V=0
+
     print("handler for shar_b\n", .{});
     insn.display();
     @panic("not implemented!");
 }
 fn handle_shar_w(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const a = self.grn(oands);
+    const b = (a >> 1) | (a & 0x8000);
+
+    self.srn(oands, b);
+    flg_shro(u16, self, a, b, (a&1)!=0);
+    // V=0
+
     print("handler for shar_w\n", .{});
     insn.display();
     @panic("not implemented!");
 }
 fn handle_shar_l(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const a = self.ger(oands);
+    const b = (a >> 1) | (a & 0x80000000);
+
+    self.ser(oands, b);
+    flg_shro(u32, self, a, b, (a&1)!=0);
+    // V=0
+
     print("handler for shar_l\n", .{});
     insn.display();
     @panic("not implemented!");
 }
 fn handle_shll_b(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const a = self.ghl(oands);
+    const b = a << 1;
+
+    self.shl(oands, @truncate(u8, b));
+    flg_shro(u8, self, a, b, (a & 0x80)!=0);
+
     print("handler for shll_b\n", .{});
     insn.display();
     @panic("not implemented!");
 }
 fn handle_shll_w(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const a = self.grn(oands);
+    const b = a << 1;
+
+    self.srn(oands, @truncate(u16, b));
+    flg_shro(u16, self, a, b, (a & 0x8000)!=0);
+
     print("handler for shll_w\n", .{});
     insn.display();
     @panic("not implemented!");
 }
 fn handle_shll_l(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const a = self.ger(oands);
+    const b = a << 1;
+
+    self.ser(oands, @truncate(u32, b));
+    flg_shro(u32, self, a, b, (a & 0x80000000)!=0);
+
     print("handler for shll_l\n", .{});
     insn.display();
     @panic("not implemented!");
 }
 fn handle_shlr_b(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const a = self.ghl(oands);
+    const b = (a >> 1);
+
+    self.shl(oands, a);
+    flg_shro(u8, self, a, b, (a&1)!=0);
+    // V=0
+
     print("handler for shlr_b\n", .{});
     insn.display();
     @panic("not implemented!");
 }
 fn handle_shlr_w(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const a = self.grn(oands);
+    const b = (a >> 1);
+
+    self.srn(oands, b);
+    flg_shro(u16, self, a, b, (a&1)!=0);
+    // V=0
+
     print("handler for shlr_w\n", .{});
     insn.display();
     @panic("not implemented!");
 }
 fn handle_shlr_l(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    next(self);
+
+    const a = self.ger(oands);
+    const b = (a >> 1);
+
+    self.ser(oands, b);
+    flg_shro(u32, self, a, b, (a&1)!=0);
+    // V=0
+
     print("handler for shlr_l\n", .{});
     insn.display();
     @panic("not implemented!");
