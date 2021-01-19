@@ -25,6 +25,12 @@ pub fn main() anyerror!void {
     try H838606F.init(&h8, allocar, allocgp, @ptrCast(*[48*1024]u8, flash));
 
     h8.reset();
-    h8.run(100);
+
+    const stdin = std.io.getStdIn().inStream();
+
+    while (true) {
+        h8.run(256);
+        _ = try stdin.readByte();
+    }
 }
 

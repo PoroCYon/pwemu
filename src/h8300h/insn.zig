@@ -577,7 +577,7 @@ pub const Insn = union(Opcode) {
             .mov_l_d24_rn => |d| print("mov.l @(H'{X:6}, {}), {}\n", .{D(d.a1), D(d.a2), D(d.b)}),
             .mov_b_Mern_inc_rn => |d| print("mov.b @{}+, {}\n", .{D(d.a), D(d.b)}),
             .mov_w_Mern_inc_rn => |d|
-                if (d.a == .er7)  print("pop.l {}\n", .{D(d.b)})
+                if (d.a == .er7)  print("pop.w {}\n", .{D(d.b)})
                 else print("mov.w @{}+, {}\n", .{D(d.a), D(d.b)}),
             .mov_l_Mern_inc_rn => |d|
                 if (d.a == .er7)  print("pop.l {}\n", .{D(d.b)})

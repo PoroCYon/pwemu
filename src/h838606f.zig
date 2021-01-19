@@ -143,12 +143,16 @@ pub const H838606F = struct {
             // IO2 TODO
             std.debug.print("read8 unknown IO2 address 0x{x:}\n", .{off});
             return undefined;
+        } else {
+            std.debug.print("read8 unknown WTF address 0x{x:}\n", .{off});
+            return undefined;
         }
-        std.debug.print("read8 unknown WTF address 0x{x:}\n", .{off});
-        return undefined;
     }
-    pub fn read16(self: *H838606F, off: usize) u16 {
+    pub fn read16(self: *H838606F, off_: usize) u16 {
+        const off = off_ ^ (off_ & 1); // address must be aligned
+
         if (off >= 0 and off < 48*1024) {
+            // big-endian
             return (@as(u16, self.flash[off  ]) << 8)
                  |  @as(u16, self.flash[off+1]);
         } else if (off >= 0xf020 and off < 0xf100) {
@@ -156,19 +160,55 @@ pub const H838606F = struct {
             std.debug.print("read16 unknown IO1 address 0x{x:}\n", .{off});
             return undefined;
         } else if (off >= 0xfb80 and off < 0xff80) {
-            return (@as(u16, self.ram[off - 0xfb80   ]) << 8)
-                 |  @as(u16, self.ram[off - 0xfb80 +1]);
+            // big-endian
+            return (@as(u16, self.ram[off-0xfb80  ]) << 8)
+                 |  @as(u16, self.ram[off-0xfb80+1]);
         } else if (off >= 0xff80 and off <=0xffff) {
             // IO2 TODO
             std.debug.print("read16 unknown IO2 address 0x{x:}\n", .{off});
             return undefined;
+        } else {
+            std.debug.print("read16 unknown WTF address 0x{x:}\n", .{off});
+            return undefined;
         }
-        std.debug.print("read16 unknown WTF address 0x{x:}\n", .{off});
-        return undefined;
     }
 
-    pub fn write8 (self: *H838606F, off: usize, v: u8 ) void { }
-    pub fn write16(self: *H838606F, off: usize, v: u16) void { }
+    pub fn write8 (self: *H838606F, off: usize, v: u8 ) void {
+        if (off >= 0 and off < 48*1024) {
+            self.flash[off] = v;
+        } else if (off >= 0xf020 and off < 0xf100) {
+            // IO1 TODO
+            std.debug.print("write8 unknown IO1 address 0x{x:} <- 0x{x:}\n", .{off,v});
+        } else if (off >= 0xfb80 and off < 0xff80) {
+            self.ram[off-0xfb80] = v;
+        } else if (off >= 0xff80 and off <=0xffff) {
+            // IO2 TODO
+            std.debug.print("write8 unknown IO2 address 0x{x:} <- 0x{x:}\n", .{off,v});
+        } else {
+            std.debug.print("write8 unknown WTF address 0x{x:} <- 0x{x:}\n", .{off,v});
+        }
+    }
+    pub fn write16(self: *H838606F, off_: usize, v: u16) void {
+        const off = off_ ^ (off_ & 1); // address must be aligned
+
+        if (off >= 0 and off < 48*1024) {
+            // big-endian
+            self.flash[off  ] = @truncate(u8, v >> 8);
+            self.flash[off+1] = @truncate(u8, v &255);
+        } else if (off >= 0xf020 and off < 0xf100) {
+            // IO1 TODO
+            std.debug.print("write16 unknown IO1 address 0x{x:} <- 0x{x:}\n", .{off,v});
+        } else if (off >= 0xfb80 and off < 0xff80) {
+            // big-endian
+            self.ram[off-0xfb80  ] = @truncate(u8, v >> 8);
+            self.ram[off-0xfb80+1] = @truncate(u8, v &255);
+        } else if (off >= 0xff80 and off <=0xffff) {
+            // IO2 TODO
+            std.debug.print("write16 unknown IO2 address 0x{x:} <- 0x{x:}\n", .{off,v});
+        } else {
+            std.debug.print("write16 unknown WTF address 0x{x:} <- 0x{x:}\n", .{off,v});
+        }
+    }
 };
 
 // mmap:

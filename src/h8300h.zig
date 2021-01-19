@@ -12,7 +12,7 @@ pub const State = enum {
 };
 pub const CCR = enum(u8) { // TODO: flags enum?
     none = 0,
-    i = 1<<7, ui= 1<<6, h = 1<<5, u = 1<<4,
+    i = 1<<7, U = 1<<6, h = 1<<5, u = 1<<4,
     n = 1<<3, z = 1<<2, v = 1<<1, c = 1<<0,
     _
 };
@@ -35,8 +35,21 @@ pub const H8300H = struct {
     pending: PendingExn,
 
     pub fn stat(self: *const H8300H) void {
-        print("pc=0x{x:4} fetched=0x{x:4} ccr={} state={} pending={}\n",
-            .{self.pc,self.fetch,self.ccr,self.state,self.pending});
+        // can't do this just in the print() call inline bc compiler bugs >__>
+        var flags: [8]u8 = undefined;
+
+        comptime var i = 0;
+        inline while (i < 8) : (i += 1) {
+            flags[i] = '-';
+            const ev = @intToEnum(CCR, @as(u8,1)<<@truncate(u3,i));
+            if (self.hasc(ev)) flags[i] = @tagName(ev)[0];
+        }
+
+        var args =
+            .{self.pc,self.fetch,
+                flags[7],flags[6],flags[5],flags[4],flags[3],flags[2],flags[1],flags[0],
+                self.state,self.pending};
+        print("pc=0x{x:4} fetched=0x{x:4} ccr={c}{c}{c}{c}{c}{c}{c}{c} state={} pending={}\n", args);
         print("er0=0x{x:8} er1=0x{x:8} er2=0x{x:8} er3=0x{x:8}\n",
             .{self.reg[0],self.reg[1],self.reg[2],self.reg[3]});
         print("er4=0x{x:8} er5=0x{x:8} er6=0x{x:8} er7=0x{x:8}\n",
@@ -45,7 +58,7 @@ pub const H8300H = struct {
 
     pub fn init(s: *H838606F) H8300H {
         return H8300H { .sys = s, .pc = 0, .ccr = .i, .reg = undefined,
-            .state = .reset, .pending = .rst, .fetch = 0
+            .state = .reset, .pending = .none, .fetch = 0
         };
     }
     pub fn reset(self: H8300H) void {
@@ -173,9 +186,10 @@ pub const H8300H = struct {
             switch (self.state) {
                 .reset => {
                     self.pc = self.read16(0x0000);
-                    print("pc = 0x{x:04}, going rst->exec now...\n", .{self.pc});
+                    print("pc = 0x{x:04}, going rst->exec now... (pending: 0x{x})\n", .{self.pc, @enumToInt(self.pending)});
                     self.fetch = self.read16(self.pc); self.pc +%= 2;
                     //self.orp(.rst);
+                    self.setp(.rst, .none);
                     self.state = .exec;
                 },
                 .exn => {
@@ -185,12 +199,7 @@ pub const H8300H = struct {
                     self.handle_exn();
                 },
                 .exec => {
-                    if (self.pending != .none) { // shortcut
-                        self.state = .exn;
-                        self.handle_exn();
-                    } else {
-                        self.handle_exec();
-                    }
+                    self.handle_exec();
                 },
                 .bus => {
                     // bus released (to periph): wait until reattach,
@@ -229,8 +238,10 @@ pub const H8300H = struct {
     pub inline fn xorc(self: *H8300H, f: CCR) void {
         self.ccr = @intToEnum(CCR, @enumToInt(f)^@enumToInt(self.ccr));
     }
-    pub inline fn hasc(self: *H8300H, f: CCR) bool {
-        return (@enumToInt(self.ccr) & @enumToInt(f)) != 0;
+    pub inline fn hasc(self: *const H8300H, f: CCR) bool {
+        const res = (@enumToInt(self.ccr) & @enumToInt(f));
+        const rv = (@enumToInt(self.ccr) & @enumToInt(f)) != 0;
+        return rv;
     }
 
     pub inline fn setp(self: *H8300H, mask: PendingExn, val: PendingExn) void {
@@ -248,7 +259,7 @@ pub const H8300H = struct {
     pub inline fn xorp(self: *H8300H, f: PendingExn) void {
         self.pending = @intToEnum(PendingExn, @enumToInt(f)^@enumToInt(self.pending));
     }
-    pub inline fn hasp(self: *H8300H, f: PendingExn) bool {
+    pub inline fn hasp(self: *const H8300H, f: PendingExn) bool {
         return (@enumToInt(self.pending) & @enumToInt(f)) != 0;
     }
 
