@@ -71,10 +71,10 @@ const insntab = comptime blk: {
 pub fn exec(self: *H8300H) void {
     const possible_words = [_]u16{
         self.fetch,
-        self.sys.read16(self.pc+0),
-        self.sys.read16(self.pc+2),
-        self.sys.read16(self.pc+4),
-        self.sys.read16(self.pc+6)
+        self.sys.read16(self.pc+0, .{.cycle=false,.eff=false}),
+        self.sys.read16(self.pc+2, .{.cycle=false,.eff=false}),
+        self.sys.read16(self.pc+4, .{.cycle=false,.eff=false}),
+        self.sys.read16(self.pc+6, .{.cycle=false,.eff=false})
     };
     const insn = decode.decodeA(5, possible_words) orelse {
         print("unrecognised opcode, fetch=H'{x:4} pc=H'{x:4}\n",

@@ -29,13 +29,16 @@ pub const Sched = struct {
     events: ArrayList(Event),
     runthrd: c.cothread_t,
     mainthrd: c.cothread_t,
+    broken: bool,
+    interactive: bool,
 
     pub fn init(s: *H838606F, alloc: *Allocator) Sched {
         return Sched { .sys = s, .cycles = 0, .target = 0,
             .events = ArrayList(Event).init(alloc),
 
             .runthrd = c.co_create(1*1024*1024, runthread),
-            .mainthrd = c.co_active()
+            .mainthrd = c.co_active(),
+            .broken = false, .interactive = true
         };
     }
 
@@ -102,11 +105,20 @@ pub const Sched = struct {
 
     pub fn run(self: *Sched, inc: u64) void {
         self.target += inc;
+        self.broken = false;
 
         mysched = self;
-        while (self.cycles < self.target) {
+        while (self.cycles < self.target and !self.broken) {
             c.co_switch(self.runthrd);
         }
+        if (self.broken and self.interactive) {
+            self.target = self.cycles;
+        }
+    }
+
+    pub fn ibreak(self: *Sched) void {
+        self.broken = true;
+        self.cycle_endrun();
     }
 };
 

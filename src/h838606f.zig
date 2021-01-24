@@ -17,6 +17,11 @@ usingnamespace @import("tmrb1.zig");
 usingnamespace @import("tmrw.zig");
 usingnamespace @import("wdt.zig");
 
+pub const BusAccess = struct {
+    cycle: bool = true,
+    eff  : bool = true
+};
+
 pub const H838606F = struct {
     cycles: u64,
     sched: Sched,
@@ -130,83 +135,103 @@ pub const H838606F = struct {
         self.sched.run(inc);
     }
 
-    pub fn read8 (self: *H838606F, off: usize) u8  {
+    pub fn read8 (self: *H838606F, off: usize, comptime flags: BusAccess) u8  {
         if (off >= 0 and off < 48*1024) {
+            if (flags.cycle) self.sched.cycle(2);
             return self.flash[off];
         } else if (off >= 0xf020 and off < 0xf100) {
             // IO1 TODO
             std.debug.print("read8 unknown IO1 address 0x{x:}\n", .{off});
+            self.sched.ibreak();
             return undefined;
         } else if (off >= 0xfb80 and off < 0xff80) {
+            if (flags.cycle) self.sched.cycle(2);
             return self.ram[off - 0xfb80];
         } else if (off >= 0xff80 and off <=0xffff) {
             // IO2 TODO
             std.debug.print("read8 unknown IO2 address 0x{x:}\n", .{off});
+            self.sched.ibreak();
             return undefined;
         } else {
             std.debug.print("read8 unknown WTF address 0x{x:}\n", .{off});
+            self.sched.ibreak();
             return undefined;
         }
     }
-    pub fn read16(self: *H838606F, off_: usize) u16 {
+    pub fn read16(self: *H838606F, off_: usize, comptime flags: BusAccess) u16 {
         const off = off_ ^ (off_ & 1); // address must be aligned
 
         if (off >= 0 and off < 48*1024) {
             // big-endian
+            if (flags.cycle) self.sched.cycle(2);
             return (@as(u16, self.flash[off  ]) << 8)
                  |  @as(u16, self.flash[off+1]);
         } else if (off >= 0xf020 and off < 0xf100) {
             // IO1 TODO
             std.debug.print("read16 unknown IO1 address 0x{x:}\n", .{off});
+            self.sched.ibreak();
             return undefined;
         } else if (off >= 0xfb80 and off < 0xff80) {
             // big-endian
+            if (flags.cycle) self.sched.cycle(2);
             return (@as(u16, self.ram[off-0xfb80  ]) << 8)
                  |  @as(u16, self.ram[off-0xfb80+1]);
         } else if (off >= 0xff80 and off <=0xffff) {
             // IO2 TODO
             std.debug.print("read16 unknown IO2 address 0x{x:}\n", .{off});
+            self.sched.ibreak();
             return undefined;
         } else {
             std.debug.print("read16 unknown WTF address 0x{x:}\n", .{off});
+            self.sched.ibreak();
             return undefined;
         }
     }
 
-    pub fn write8 (self: *H838606F, off: usize, v: u8 ) void {
+    pub fn write8 (self: *H838606F, off: usize, v: u8 , comptime flags: BusAccess) void {
         if (off >= 0 and off < 48*1024) {
+            if (flags.cycle) self.sched.cycle(2);
             self.flash[off] = v;
         } else if (off >= 0xf020 and off < 0xf100) {
             // IO1 TODO
             std.debug.print("write8 unknown IO1 address 0x{x:} <- 0x{x:}\n", .{off,v});
+            self.sched.ibreak();
         } else if (off >= 0xfb80 and off < 0xff80) {
+            if (flags.cycle) self.sched.cycle(2);
             self.ram[off-0xfb80] = v;
         } else if (off >= 0xff80 and off <=0xffff) {
             // IO2 TODO
             std.debug.print("write8 unknown IO2 address 0x{x:} <- 0x{x:}\n", .{off,v});
+            self.sched.ibreak();
         } else {
             std.debug.print("write8 unknown WTF address 0x{x:} <- 0x{x:}\n", .{off,v});
+            //self.sched.ibreak(); // written to on entry, ignore
         }
     }
-    pub fn write16(self: *H838606F, off_: usize, v: u16) void {
+    pub fn write16(self: *H838606F, off_: usize, v: u16, comptime flags: BusAccess) void {
         const off = off_ ^ (off_ & 1); // address must be aligned
 
         if (off >= 0 and off < 48*1024) {
             // big-endian
+            if (flags.cycle) self.sched.cycle(2);
             self.flash[off  ] = @truncate(u8, v >> 8);
             self.flash[off+1] = @truncate(u8, v &255);
         } else if (off >= 0xf020 and off < 0xf100) {
             // IO1 TODO
             std.debug.print("write16 unknown IO1 address 0x{x:} <- 0x{x:}\n", .{off,v});
+            self.sched.ibreak();
         } else if (off >= 0xfb80 and off < 0xff80) {
             // big-endian
+            if (flags.cycle) self.sched.cycle(2);
             self.ram[off-0xfb80  ] = @truncate(u8, v >> 8);
             self.ram[off-0xfb80+1] = @truncate(u8, v &255);
         } else if (off >= 0xff80 and off <=0xffff) {
             // IO2 TODO
             std.debug.print("write16 unknown IO2 address 0x{x:} <- 0x{x:}\n", .{off,v});
+            self.sched.ibreak();
         } else {
             std.debug.print("write16 unknown WTF address 0x{x:} <- 0x{x:}\n", .{off,v});
+            self.sched.ibreak();
         }
     }
 };

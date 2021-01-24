@@ -77,22 +77,22 @@ pub const H8300H = struct {
     // 'external': 8/16-bit bus, 2/3 cycles
     // => what is internal and what is external?????
     pub fn read8 (self: *H8300H, addr: u16) u8  {
-        const r = self.sys.read8 (addr);
-        self.cycle(2); // good enough for now
+        const r = self.sys.read8 (addr, .{.cycle=true,.eff=true});
+        //self.cycle(2); // good enough for now
         return r;
     }
     pub fn read16(self: *H8300H, addr: u16) u16 {
-        const r = self.sys.read16(addr);
-        self.cycle(2); // good enough for now
+        const r = self.sys.read16(addr, .{.cycle=true,.eff=true});
+        //self.cycle(2); // good enough for now
         return r;
     }
     pub fn write8 (self: *H8300H, addr: u16, v: u8 ) void {
-        self.sys.write8 (addr, v);
-        self.cycle(2); // good enough for now
+        self.sys.write8 (addr, v, .{.cycle=true,.eff=true});
+        //self.cycle(2); // good enough for now
     }
     pub fn write16(self: *H8300H, addr: u16, v: u16) void {
-        self.sys.write16(addr, v);
-        self.cycle(2); // good enough for now
+        self.sys.write16(addr, v, .{.cycle=true,.eff=true});
+        //self.cycle(2); // good enough for now
     }
 
     fn handle_exn(self: *H8300H) void {
