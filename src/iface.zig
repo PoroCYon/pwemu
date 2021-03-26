@@ -15,5 +15,6 @@ pub const Iface = struct {
     serial_write: fn (self: Iface_ud, val: u8) void,
 
     // TODO: prototypes for timer W/buzzer
+    // TODO: interrupt stuff!
 };
 

@@ -30,15 +30,15 @@ pub const I2C = extern struct { // IO1
     }
 
     pub fn write8 (self: *I2C, off: usize, v: u8 ) void { }
-    inline fn write16(self: *I2C, off: usize, v: u16) void {
-        write8(self, off+0, (v >> 8) & 0xff);
-        write8(self, off+1, (v >> 0) & 0xff);
+    pub inline fn write16(self: *I2C, off: usize, v: u16) void {
+        self.write8(off&0xfffe, @truncate(u8, v >> 8));
+        self.write8(off&0x0001, @truncate(u8, v >> 0));
     }
 
     pub fn read8 (self: *I2C, off: usize) u8  { return 0; }
-    inline fn read16(self: *I2C, off: usize) u16 {
-        return (@as(u16, read8(cmp, off+0)) << 8)
-             | (@as(u16, read8(cmp, off+1)) << 0);
+    pub inline fn read16(self: *I2C, off: usize) u16 {
+        return (@as(u16, self.read8(off&0xfffe)) << 8)
+             | (@as(u16, self.read8(off|0x0001)) << 0);
     }
 };
 

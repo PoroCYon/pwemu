@@ -27,9 +27,15 @@ pub const Aec = extern struct { // IO2
     }
 
     pub fn write8 (self: *Aec, off: usize, v: u8 ) void { }
-    pub fn write16(self: *Aec, off: usize, v: u16) void { }
+    pub inline fn write16(self: *Aec, off: usize, v: u16) void {
+        self.write8(off&0xfffe, @truncate(u8, v >> 8));
+        self.write8(off|0x0001, @truncate(u8, v >> 0));
+    }
 
     pub fn read8 (self: *Aec, off: usize) u8  { return 0; }
-    pub fn read16(self: *Aec, off: usize) u16 { return 0; }
+    pub inline fn read16(self: *Aec, off: usize) u16 {
+        return (@as(u16, self.read8(off&0xfffe)) << 8)
+             | (@as(u16, self.read8(off|0x0001)) << 0);
+    }
 };
 

@@ -40,12 +40,12 @@ pub const H838606F = struct {
     ssu: Ssu,
     tmrw: TmrW,
 
-    pfcr: u8,
     flmcr1: u8, // reset on standby!
     flmcr2: u8,
     flpwr: u8,
     ebr1: u8, // reset on standby!
     fenr: u8,
+    pfcr: u8,
 
     // IO2
     aec: Aec,
@@ -155,23 +155,86 @@ pub const H838606F = struct {
     // port 3: rx/tx, irq/gpio?
     // port 1: ROM stuff? GPIO?
 
+    pub fn ioread8 (self: *H838606F, off: usize) u8  {
+         // TODO
+         return 0;
+    }
+    pub inline fn ioread16(self: *H838606F, off: usize) u16 {
+        return (@as(u16, self.ioread8(off&0xfffe)) << 8)
+             | (@as(u16, self.ioread8(off|0x0001)) << 0);
+    }
+    pub fn iowrite8 (self: *H838606F, off: usize, v: u8 ) void {
+         // TODO
+    }
+    pub inline fn iowrite16(self: *H838606F, off: usize, v: u16) void {
+         self.iowrite8(off&0xfffe, @truncate(u8, v >> 8));
+         self.iowrite8(off|0x0001, @truncate(u8, v >> 0));
+    }
+
     pub fn read8 (self: *H838606F, off: usize, comptime flags: BusAccess) u8  {
         if (off >= 0 and off < 48*1024) {
             if (flags.cycle) self.sched.cycle(2);
             return self.flash[off];
         } else if (off >= 0xf020 and off < 0xf100) {
-            // IO1 TODO
-            std.debug.print("read8 unknown IO1 address 0x{x:}\n", .{off});
-            self.sched.ibreak();
-            return undefined;
+            if ((off >= 0xf020 and off <= 0xf02b) or off == 0xf085) { // system regs
+                if (flags.cycle) self.sched.cycle(2);
+                return self.ioread8(off);
+            } else if (off >= 0xf067 and off <= 0xf06f) { // rtc
+                if (flags.cycle) self.sched.cycle(2);
+                return self.rtc.read8(off);
+            } else if (off >= 0xf078 and off <= 0xf07f) { // i2c
+                if (flags.cycle) self.sched.cycle(2);
+                return self.i2c.read8(off);
+            } else if (off >= 0xf086 and off <= 0xf08c) { // ioport
+                if (flags.cycle) self.sched.cycle(2);
+                return self.ioport.read8(off);
+            } else if (off >= 0xf0d0 and off <= 0xf0d1) { // tmrb1
+                if (flags.cycle) self.sched.cycle(2);
+                return self.tmrb1.read8(off);
+            } else if (off >= 0xf0dc and off <= 0xf0de) { // cmp
+                if (flags.cycle) self.sched.cycle(2);
+                return self.cmp.read8(off);
+            } else if (off >= 0xf0e0 and off <= 0xf0eb) { // ssu
+                if (flags.cycle) self.sched.cycle(3); // !!!
+                return self.ssu.read8(off);
+            } else if (off >= 0xf0f0 and off <= 0xf0ff) { // tmrw
+                if (flags.cycle) self.sched.cycle(2);
+                return self.tmrw.read8(off);
+            } else {
+                std.debug.print("read8 unknown IO1 address 0x{x:}\n", .{off});
+                self.sched.ibreak();
+                return undefined;
+            }
         } else if (off >= 0xfb80 and off < 0xff80) {
             if (flags.cycle) self.sched.cycle(2);
             return self.ram[off - 0xfb80];
         } else if (off >= 0xff80 and off <=0xffff) {
-            // IO2 TODO
-            std.debug.print("read8 unknown IO2 address 0x{x:}\n", .{off});
-            self.sched.ibreak();
-            return undefined;
+            if (off >= 0xff8c and off <= 0xff8f) { // aec
+                if (flags.cycle) self.sched.cycle(2);
+                return self.aec.read8(off);
+            } else if (off == 0xff91) { // sci3
+                if (flags.cycle) self.sched.cycle(2);
+                return self.sci3.read8(off);
+            } else if (off >= 0xff92 and off <= 0xff97) { // aec
+                if (flags.cycle) self.sched.cycle(2);
+                return self.aec.read8(off);
+            } else if (off >= 0xff98 and off <= 0xffa7) { // sci3, irda
+                if (flags.cycle) self.sched.cycle(3); // !!!
+                return self.sci3.read8(off);
+            } else if (off >= 0xffbc and off <= 0xffbf) { // adc
+                if (flags.cycle) self.sched.cycle(2);
+                return self.adc.read8(off);
+            } else if (off >= 0xffc0 and off <= 0xffec) { // ioport
+                if (flags.cycle) self.sched.cycle(2);
+                return self.ioport.read8(off);
+            } else if (off >= 0xfff0) { // system regs
+                if (flags.cycle) self.sched.cycle(2);
+                return self.ioread8(off);
+            } else {
+                std.debug.print("read8 unknown IO2 address 0x{x:}\n", .{off});
+                self.sched.ibreak();
+                return undefined;
+            }
         } else {
             std.debug.print("read8 unknown WTF address 0x{x:}\n", .{off});
             self.sched.ibreak();
@@ -184,23 +247,76 @@ pub const H838606F = struct {
         if (off >= 0 and off < 48*1024) {
             // big-endian
             if (flags.cycle) self.sched.cycle(2);
-            return (@as(u16, self.flash[off  ]) << 8)
-                 |  @as(u16, self.flash[off+1]);
+            return (@as(u16, self.flash[off&0xfffe]) << 8)
+                 |  @as(u16, self.flash[off|0x0001]);
         } else if (off >= 0xf020 and off < 0xf100) {
-            // IO1 TODO
-            std.debug.print("read16 unknown IO1 address 0x{x:}\n", .{off});
-            self.sched.ibreak();
-            return undefined;
+            if ((off >= 0xf020 and off <= 0xf02b) or off == 0xf085) { // system regs
+                if (flags.cycle) self.sched.cycle(4);
+                return self.ioread16(off);
+            } else if (off >= 0xf067 and off <= 0xf06f) { // rtc
+                if (flags.cycle) self.sched.cycle(4);
+                return self.rtc.read16(off);
+            } else if (off >= 0xf078 and off <= 0xf07f) { // i2c
+                if (flags.cycle) self.sched.cycle(4);
+                return self.i2c.read16(off);
+            } else if (off >= 0xf086 and off <= 0xf08c) { // ioport
+                if (flags.cycle) self.sched.cycle(4);
+                return self.ioport.read16(off);
+            } else if (off >= 0xf0d0 and off <= 0xf0d1) { // tmrb1
+                if (flags.cycle) self.sched.cycle(4);
+                return self.tmrb1.read16(off);
+            } else if (off >= 0xf0dc and off <= 0xf0de) { // cmp
+                if (flags.cycle) self.sched.cycle(4);
+                return self.cmp.read16(off);
+            } else if (off >= 0xf0e0 and off <= 0xf0eb) { // ssu
+                if (flags.cycle) self.sched.cycle(6); // !!!
+                return self.ssu.read16(off);
+            } else if (off >= 0xf0f0 and off <= 0xf0ff) { // tmrw
+                if (flags.cycle) self.sched.cycle(2); // 16-bit bus!
+                return self.tmrw.read16(off);
+            } else {
+                std.debug.print("read16 unknown IO1 address 0x{x:}\n", .{off});
+                self.sched.ibreak();
+                return undefined;
+            }
         } else if (off >= 0xfb80 and off < 0xff80) {
             // big-endian
             if (flags.cycle) self.sched.cycle(2);
-            return (@as(u16, self.ram[off-0xfb80  ]) << 8)
-                 |  @as(u16, self.ram[off-0xfb80+1]);
+            return (@as(u16, self.ram[(off&0xfffe)-0xfb80]) << 8)
+                 |  @as(u16, self.ram[(off|0x0001)-0xfb80]);
         } else if (off >= 0xff80 and off <=0xffff) {
-            // IO2 TODO
-            std.debug.print("read16 unknown IO2 address 0x{x:}\n", .{off});
-            self.sched.ibreak();
-            return undefined;
+            // timings aren't 100% accurate (8bit-bus accesses should be spread
+            // up over multiple cycles, but, meh)
+            if (off >= 0xff8c and off <= 0xff8f) { // aec
+                if (flags.cycle) self.sched.cycle(2); // 16-bit bus!
+                return self.aec.read16(off);
+            } else if (off == 0xff91) { // sci3
+                if (flags.cycle) self.sched.cycle(4);
+                return self.sci3.read16(off);
+            } else if (off >= 0xff92 and off <= 0xff97) { // aec
+                if (flags.cycle) self.sched.cycle(4);
+                return self.aec.read16(off);
+            } else if (off >= 0xff98 and off <= 0xffa7) { // sci3, irda
+                if (flags.cycle) self.sched.cycle(6); // !!!
+                return self.sci3.read16(off);
+            } else if (off >= 0xffbc and off <= 0xffbf) { // adc
+                if (flags.cycle) {
+                    if (off == 0xffbc or off == 0xffbd) {
+                        self.sched.cycle(2);
+                    } else { self.sched.cycle(4); }
+                }
+                return self.adc.read16(off);
+            } else if (off >= 0xffc0 and off <= 0xffec) { // ioport
+                if (flags.cycle) self.sched.cycle(4);
+                return self.ioport.read16(off);
+            } else if (off >= 0xfff0) { // system regs
+                if (flags.cycle) self.sched.cycle(4);
+                return self.ioread16(off);
+            } else {
+                std.debug.print("read16 unknown IO2 address 0x{x:}\n", .{off});
+                self.sched.ibreak();
+                return undefined;
+            }
         } else {
             std.debug.print("read16 unknown WTF address 0x{x:}\n", .{off});
             self.sched.ibreak();
@@ -210,19 +326,69 @@ pub const H838606F = struct {
 
     pub fn write8 (self: *H838606F, off: usize, v: u8 , comptime flags: BusAccess) void {
         if (off >= 0 and off < 48*1024) {
-            if (flags.cycle) self.sched.cycle(2);
-            self.flash[off] = v;
-        } else if (off >= 0xf020 and off < 0xf100) {
-            // IO1 TODO
-            std.debug.print("write8 unknown IO1 address 0x{x:} <- 0x{x:}\n", .{off,v});
+            //if (flags.cycle) self.sched.cycle(2);
+            //self.flash[off] = v;
+            std.debug.print("write8 flashrom 0x{x:} <- 0x{x:}\n", .{off,v});
             self.sched.ibreak();
+        } else if (off >= 0xf020 and off < 0xf100) {
+            if ((off >= 0xf020 and off <= 0xf02b) or off == 0xf085) { // system regs
+                if (flags.cycle) self.sched.cycle(2);
+                self.iowrite8(off, v);
+            } else if (off >= 0xf067 and off <= 0xf06f) { // rtc
+                if (flags.cycle) self.sched.cycle(2);
+                self.rtc.write8(off, v);
+            } else if (off >= 0xf078 and off <= 0xf07f) { // i2c
+                if (flags.cycle) self.sched.cycle(2);
+                self.i2c.write8(off, v);
+            } else if (off >= 0xf086 and off <= 0xf08c) { // ioport
+                if (flags.cycle) self.sched.cycle(2);
+                self.ioport.write8(off, v);
+            } else if (off >= 0xf0d0 and off <= 0xf0d1) { // tmrb1
+                if (flags.cycle) self.sched.cycle(2);
+                self.tmrb1.write8(off, v);
+            } else if (off >= 0xf0dc and off <= 0xf0de) { // cmp
+                if (flags.cycle) self.sched.cycle(2);
+                self.cmp.write8(off, v);
+            } else if (off >= 0xf0e0 and off <= 0xf0eb) { // ssu
+                if (flags.cycle) self.sched.cycle(3); // !!!
+                self.ssu.write8(off, v);
+            } else if (off >= 0xf0f0 and off <= 0xf0ff) { // tmrw
+                if (flags.cycle) self.sched.cycle(2);
+                self.tmrw.write8(off, v);
+            } else {
+                std.debug.print("write8 unknown IO1 address 0x{x:} <- 0x{x:}\n", .{off,v});
+                self.sched.ibreak();
+            }
         } else if (off >= 0xfb80 and off < 0xff80) {
             if (flags.cycle) self.sched.cycle(2);
             self.ram[off-0xfb80] = v;
         } else if (off >= 0xff80 and off <=0xffff) {
             // IO2 TODO
-            std.debug.print("write8 unknown IO2 address 0x{x:} <- 0x{x:}\n", .{off,v});
-            self.sched.ibreak();
+            if (off >= 0xff8c and off <= 0xff8f) { // aec
+                if (flags.cycle) self.sched.cycle(2);
+                self.aec.write8(off, v);
+            } else if (off == 0xff91) { // sci3
+                if (flags.cycle) self.sched.cycle(2);
+                self.sci3.write8(off, v);
+            } else if (off >= 0xff92 and off <= 0xff97) { // aec
+                if (flags.cycle) self.sched.cycle(2);
+                self.aec.write8(off, v);
+            } else if (off >= 0xff98 and off <= 0xffa7) { // sci3, irda
+                if (flags.cycle) self.sched.cycle(3); // !!!
+                self.sci3.write8(off, v);
+            } else if (off >= 0xffbc and off <= 0xffbf) { // adc
+                if (flags.cycle) self.sched.cycle(2);
+                self.adc.write8(off, v);
+            } else if (off >= 0xffc0 and off <= 0xffec) { // ioport
+                if (flags.cycle) self.sched.cycle(2);
+                self.ioport.write8(off, v);
+            } else if (off >= 0xfff0) { // system regs
+                if (flags.cycle) self.sched.cycle(2);
+                self.iowrite8(off, v);
+            } else {
+                std.debug.print("write8 unknown IO2 address 0x{x:} <- 0x{x:}\n", .{off,v});
+                self.sched.ibreak();
+            }
         } else {
             std.debug.print("write8 unknown WTF address 0x{x:} <- 0x{x:}\n", .{off,v});
             //self.sched.ibreak(); // written to on entry, ignore
@@ -233,22 +399,75 @@ pub const H838606F = struct {
 
         if (off >= 0 and off < 48*1024) {
             // big-endian
-            if (flags.cycle) self.sched.cycle(2);
-            self.flash[off  ] = @truncate(u8, v >> 8);
-            self.flash[off+1] = @truncate(u8, v &255);
-        } else if (off >= 0xf020 and off < 0xf100) {
-            // IO1 TODO
-            std.debug.print("write16 unknown IO1 address 0x{x:} <- 0x{x:}\n", .{off,v});
+            //if (flags.cycle) self.sched.cycle(2);
+            //self.flash[off&0xfffe] = @truncate(u8, v >> 8);
+            //self.flash[off|0x0001] = @truncate(u8, v &255);
+            std.debug.print("write16 flashrom 0x{x:} <- 0x{x:}\n", .{off,v});
             self.sched.ibreak();
+        } else if (off >= 0xf020 and off < 0xf100) {
+            if ((off >= 0xf020 and off <= 0xf02b) or off == 0xf085) { // system regs
+                if (flags.cycle) self.sched.cycle(4);
+                self.iowrite16(off, v);
+            } else if (off >= 0xf067 and off <= 0xf06f) { // rtc
+                if (flags.cycle) self.sched.cycle(4);
+                self.rtc.write16(off, v);
+            } else if (off >= 0xf078 and off <= 0xf07f) { // i2c
+                if (flags.cycle) self.sched.cycle(4);
+                self.i2c.write16(off, v);
+            } else if (off >= 0xf086 and off <= 0xf08c) { // ioport
+                if (flags.cycle) self.sched.cycle(4);
+                self.ioport.write16(off, v);
+            } else if (off >= 0xf0d0 and off <= 0xf0d1) { // tmrb1
+                if (flags.cycle) self.sched.cycle(4);
+                self.tmrb1.write16(off, v);
+            } else if (off >= 0xf0dc and off <= 0xf0de) { // cmp
+                if (flags.cycle) self.sched.cycle(4);
+                self.cmp.write16(off, v);
+            } else if (off >= 0xf0e0 and off <= 0xf0eb) { // ssu
+                if (flags.cycle) self.sched.cycle(6); // !!!
+                self.ssu.write16(off, v);
+            } else if (off >= 0xf0f0 and off <= 0xf0ff) { // tmrw
+                if (flags.cycle) self.sched.cycle(2); // 16-bit bus!
+                self.tmrw.write16(off, v);
+            } else {
+                std.debug.print("write16 unknown IO1 address 0x{x:} <- 0x{x:}\n", .{off,v});
+                self.sched.ibreak();
+            }
         } else if (off >= 0xfb80 and off < 0xff80) {
             // big-endian
             if (flags.cycle) self.sched.cycle(2);
-            self.ram[off-0xfb80  ] = @truncate(u8, v >> 8);
-            self.ram[off-0xfb80+1] = @truncate(u8, v &255);
+            self.ram[(off&0xfffe)-0xfb80] = @truncate(u8, v >> 8);
+            self.ram[(off|0x0001)-0xfb80] = @truncate(u8, v &255);
         } else if (off >= 0xff80 and off <=0xffff) {
-            // IO2 TODO
-            std.debug.print("write16 unknown IO2 address 0x{x:} <- 0x{x:}\n", .{off,v});
-            self.sched.ibreak();
+            if (off >= 0xff8c and off <= 0xff8f) { // aec
+                if (flags.cycle) self.sched.cycle(2); // 16-bit bus!
+                self.aec.write16(off, v);
+            } else if (off == 0xff91) { // sci3
+                if (flags.cycle) self.sched.cycle(4);
+                self.sci3.write16(off, v);
+            } else if (off >= 0xff92 and off <= 0xff97) { // aec
+                if (flags.cycle) self.sched.cycle(4);
+                self.aec.write16(off, v);
+            } else if (off >= 0xff98 and off <= 0xffa7) { // sci3, irda
+                if (flags.cycle) self.sched.cycle(6); // !!!
+                self.sci3.write16(off, v);
+            } else if (off >= 0xffbc and off <= 0xffbf) { // adc
+                if (flags.cycle) {
+                    if (off == 0xffbc or off == 0xffbd) {
+                        self.sched.cycle(2);
+                    } else { self.sched.cycle(4); }
+                }
+                self.adc.write16(off, v);
+            } else if (off >= 0xffc0 and off <= 0xffec) { // ioport
+                if (flags.cycle) self.sched.cycle(4);
+                self.ioport.write16(off, v);
+            } else if (off >= 0xfff0) { // system regs
+                if (flags.cycle) self.sched.cycle(4);
+                self.iowrite16(off, v);
+            } else {
+                std.debug.print("write16 unknown IO2 address 0x{x:} <- 0x{x:}\n", .{off,v});
+                self.sched.ibreak();
+            }
         } else {
             std.debug.print("write16 unknown WTF address 0x{x:} <- 0x{x:}\n", .{off,v});
             self.sched.ibreak();
