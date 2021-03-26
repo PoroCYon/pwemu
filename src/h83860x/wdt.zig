@@ -1,5 +1,5 @@
 
-const H838606F = @import("h838606f.zig").H838606F;
+const H838606F = @import("../h838606f.zig").H838606F;
 
 pub const Wdt = extern struct { // IO2
     sys: *H838606F,

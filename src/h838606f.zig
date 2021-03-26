@@ -5,17 +5,19 @@ const Allocator = std.mem.Allocator;
 usingnamespace @import("sched.zig");
 
 usingnamespace @import("h8300h.zig");
-usingnamespace @import("adc.zig");
-usingnamespace @import("aec.zig");
-usingnamespace @import("cmp.zig");
-usingnamespace @import("i2c.zig");
-usingnamespace @import("ioport.zig");
-usingnamespace @import("rtc.zig");
-usingnamespace @import("sci3.zig");
-usingnamespace @import("ssu.zig");
-usingnamespace @import("tmrb1.zig");
-usingnamespace @import("tmrw.zig");
-usingnamespace @import("wdt.zig");
+usingnamespace @import("h83860x/adc.zig");
+usingnamespace @import("h83860x/aec.zig");
+usingnamespace @import("h83860x/cmp.zig");
+usingnamespace @import("h83860x/i2c.zig");
+usingnamespace @import("h83860x/ioport.zig");
+usingnamespace @import("h83860x/rtc.zig");
+usingnamespace @import("h83860x/sci3.zig");
+usingnamespace @import("h83860x/ssu.zig");
+usingnamespace @import("h83860x/tmrb1.zig");
+usingnamespace @import("h83860x/tmrw.zig");
+usingnamespace @import("h83860x/wdt.zig");
+
+usingnamespace @import("iface.zig");
 
 pub const BusAccess = struct {
     cycle: bool = true,
@@ -25,6 +27,7 @@ pub const BusAccess = struct {
 pub const H838606F = struct {
     cycles: u64,
     sched: Sched,
+    iface: Iface,
 
     h8300h: H8300H,
 
@@ -68,9 +71,10 @@ pub const H838606F = struct {
     //       buzzer output callback, button input
 
     // TODO: version that just takes the ptr to own?
-    pub fn init(ret: *H838606F, alloc: *Allocator, allocgp: *Allocator, flashrom: *[48*1024]u8) !void {
+    pub fn init(ret: *H838606F, iface: Iface, alloc: *Allocator, allocgp: *Allocator, flashrom: *[48*1024]u8) !void {
         //var ret: H838606F = undefined;
 
+        ret.iface = iface;
         ret.h8300h = H8300H.init(ret);
 
         ret.sched = Sched.init(ret, allocgp);
@@ -134,6 +138,22 @@ pub const H838606F = struct {
     pub fn run(self: *H838606F, inc: u64) void {
         self.sched.run(inc);
     }
+
+    // TODO:
+    // irda tx, rx
+    // serial miso, mosi
+    // serial chipsel / GPIO
+    // button inputs
+    // buzzer output
+    // nmi
+    //
+    // port 8: rtc
+    // port 9: timer, GPIO?
+    // port B: serial, IRQ?
+    // sci3/irda
+    // aec
+    // port 3: rx/tx, irq/gpio?
+    // port 1: ROM stuff? GPIO?
 
     pub fn read8 (self: *H838606F, off: usize, comptime flags: BusAccess) u8  {
         if (off >= 0 and off < 48*1024) {

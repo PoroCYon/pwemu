@@ -6,7 +6,7 @@ const c = @cImport({
     @cInclude("stdlib.h");
 });
 
-usingnamespace @import("h838606f.zig");
+usingnamespace @import("walker.zig");
 
 pub fn main() anyerror!void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
@@ -22,11 +22,12 @@ pub fn main() anyerror!void {
     const flash = try d.readFileAlloc(allocar, "./pwflash.rom", 48*1024);
     const eep = try d.readFileAlloc(allocar, "./pweep.rom", 64*1024);
 
-    var h8: H838606F = undefined;
-    try H838606F.init(&h8, allocar, allocgp, @ptrCast(*[48*1024]u8, flash));
+    var walker: Walker = undefined;
+    try Walker.init(&walker, allocar, allocgp,
+        @ptrCast(*[48*1024]u8, flash), @ptrCast(*[64*1024]u8, eep));
 
-    h8.reset();
-    h8.sched.interactive = true;
+    walker.reset();
+    walker.h838606f.sched.interactive = true;
 
     const print = std.debug.print;
 
@@ -34,7 +35,7 @@ pub fn main() anyerror!void {
     var linebuf = @ptrCast([*c]u8, c.calloc(1,linelen));
     defer c.free(linebuf);
     mainloop: while (true) {
-        h8.h8300h.stat();
+        walker.h838606f.h8300h.stat();
         print("> ", .{});
 
         const rrr = c.getline(&linebuf, &linelen, c.stdin);
@@ -49,9 +50,9 @@ pub fn main() anyerror!void {
             // TODO: actual cmd parsing
             const cycles = c.strtoul(linebuf, null, 0);
             print("run for {} cyc\n", .{cycles});
-            h8.run(cycles);
+            walker.run(cycles);
 
-            if (h8.sched.broken) {
+            if (walker.h838606f.sched.broken) {
                 print("B! ", .{});
             }
         }
