@@ -67,6 +67,7 @@ pub const Walker = struct {
                 if (mask & (1<<0) != 0) {
                     self.acc_cs = (val & (1<<0)) == 0;
                     std.debug.print("acc_cs = {}\n", .{self.acc_cs});
+                    if (!self.acc_cs) self.bma150.cs_end();
                     //self.h838606f.h8300h.stat();
                 }
             },
@@ -76,12 +77,13 @@ pub const Walker = struct {
     pub fn serial_read(self_: Iface_ud) u8 {
         const self = @ptrCast(*Walker, self_);
 
-        std.debug.print("serial read...\n", .{});
-        self.h838606f.h8300h.stat();
 
         var ret: u8 = 0;
 
         if (self.acc_cs) ret |= self.bma150.read();
+
+        std.debug.print("serial read -> 0x{x:}\n", .{ret});
+        //self.h838606f.h8300h.stat();
 
         return ret;
     }
@@ -89,7 +91,7 @@ pub const Walker = struct {
         const self = @ptrCast(*Walker, self_);
 
         std.debug.print("serial write 0x{x:}\n", .{val});
-        self.h838606f.h8300h.stat();
+        //self.h838606f.h8300h.stat();
 
         if (self.acc_cs) self.bma150.write(val);
     }
