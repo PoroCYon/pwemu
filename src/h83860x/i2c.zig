@@ -1,7 +1,7 @@
 
 const H838606F = @import("../h838606f.zig").H838606F;
 
-pub const I2C = extern struct { // IO1
+pub const I2C = struct { // IO1
     sys: *H838606F,
 
     iccr1: u8,

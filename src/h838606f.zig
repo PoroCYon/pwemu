@@ -28,6 +28,7 @@ pub const H838606F = struct {
     cycles: u64,
     sched: Sched,
     iface: Iface,
+    ud: Iface_ud,
 
     h8300h: H8300H,
 
@@ -45,7 +46,6 @@ pub const H838606F = struct {
     flpwr: u8,
     ebr1: u8, // reset on standby!
     fenr: u8,
-    pfcr: u8,
 
     // IO2
     aec: Aec,
@@ -71,10 +71,10 @@ pub const H838606F = struct {
     //       buzzer output callback, button input
 
     // TODO: version that just takes the ptr to own?
-    pub fn init(ret: *H838606F, iface: Iface, alloc: *Allocator, allocgp: *Allocator, flashrom: *[48*1024]u8) !void {
+    pub fn init(ret: *H838606F, iface: Iface, ud: Iface_ud, alloc: *Allocator, allocgp: *Allocator, flashrom: *[48*1024]u8) !void {
         //var ret: H838606F = undefined;
 
-        ret.iface = iface;
+        ret.iface = iface; ret.ud = ud;
         ret.h8300h = H8300H.init(ret);
 
         ret.sched = Sched.init(ret, allocgp);
@@ -85,7 +85,7 @@ pub const H838606F = struct {
         ret.cmp = Cmp.init(ret);
         ret.ssu = Ssu.init(ret);
         ret.tmrw = TmrW.init(ret);
-        ret.pfcr = 0; ret.flmcr1 = 0; ret.flmcr2 = 0;
+        ret.flmcr1 = 0; ret.flmcr2 = 0;
         ret.flpwr = 0; ret.ebr1 = 0; ret.fenr = 0;
 
         ret.aec = Aec.init(ret);
@@ -120,7 +120,7 @@ pub const H838606F = struct {
         self.ssu.reset();
         self.tmrw.reset();
 
-        self.pfcr = 0; self.flmcr1 = 0; self.flmcr2 = 0;
+        self.flmcr1 = 0; self.flmcr2 = 0;
         self.flpwr = 0; self.ebr1 = 0; self.fenr = 0;
 
         self.aec.reset();
@@ -176,7 +176,7 @@ pub const H838606F = struct {
             if (flags.cycle) self.sched.cycle(2);
             return self.flash[off];
         } else if (off >= 0xf020 and off < 0xf100) {
-            if ((off >= 0xf020 and off <= 0xf02b) or off == 0xf085) { // system regs
+            if (off >= 0xf020 and off <= 0xf02b) { // system regs
                 if (flags.cycle) self.sched.cycle(2);
                 return self.ioread8(off);
             } else if (off >= 0xf067 and off <= 0xf06f) { // rtc
@@ -185,7 +185,7 @@ pub const H838606F = struct {
             } else if (off >= 0xf078 and off <= 0xf07f) { // i2c
                 if (flags.cycle) self.sched.cycle(2);
                 return self.i2c.read8(off);
-            } else if (off >= 0xf086 and off <= 0xf08c) { // ioport
+            } else if (off >= 0xf085 and off <= 0xf08c) { // ioport
                 if (flags.cycle) self.sched.cycle(2);
                 return self.ioport.read8(off);
             } else if (off >= 0xf0d0 and off <= 0xf0d1) { // tmrb1
@@ -250,7 +250,7 @@ pub const H838606F = struct {
             return (@as(u16, self.flash[off&0xfffe]) << 8)
                  |  @as(u16, self.flash[off|0x0001]);
         } else if (off >= 0xf020 and off < 0xf100) {
-            if ((off >= 0xf020 and off <= 0xf02b) or off == 0xf085) { // system regs
+            if (off >= 0xf020 and off <= 0xf02b) { // system regs
                 if (flags.cycle) self.sched.cycle(4);
                 return self.ioread16(off);
             } else if (off >= 0xf067 and off <= 0xf06f) { // rtc
@@ -259,7 +259,7 @@ pub const H838606F = struct {
             } else if (off >= 0xf078 and off <= 0xf07f) { // i2c
                 if (flags.cycle) self.sched.cycle(4);
                 return self.i2c.read16(off);
-            } else if (off >= 0xf086 and off <= 0xf08c) { // ioport
+            } else if (off >= 0xf085 and off <= 0xf08c) { // ioport
                 if (flags.cycle) self.sched.cycle(4);
                 return self.ioport.read16(off);
             } else if (off >= 0xf0d0 and off <= 0xf0d1) { // tmrb1
@@ -331,7 +331,7 @@ pub const H838606F = struct {
             std.debug.print("write8 flashrom 0x{x:} <- 0x{x:}\n", .{off,v});
             self.sched.ibreak();
         } else if (off >= 0xf020 and off < 0xf100) {
-            if ((off >= 0xf020 and off <= 0xf02b) or off == 0xf085) { // system regs
+            if (off >= 0xf020 and off <= 0xf02b) { // system regs
                 if (flags.cycle) self.sched.cycle(2);
                 self.iowrite8(off, v);
             } else if (off >= 0xf067 and off <= 0xf06f) { // rtc
@@ -340,7 +340,7 @@ pub const H838606F = struct {
             } else if (off >= 0xf078 and off <= 0xf07f) { // i2c
                 if (flags.cycle) self.sched.cycle(2);
                 self.i2c.write8(off, v);
-            } else if (off >= 0xf086 and off <= 0xf08c) { // ioport
+            } else if (off >= 0xf085 and off <= 0xf08c) { // ioport
                 if (flags.cycle) self.sched.cycle(2);
                 self.ioport.write8(off, v);
             } else if (off >= 0xf0d0 and off <= 0xf0d1) { // tmrb1
@@ -405,7 +405,7 @@ pub const H838606F = struct {
             std.debug.print("write16 flashrom 0x{x:} <- 0x{x:}\n", .{off,v});
             self.sched.ibreak();
         } else if (off >= 0xf020 and off < 0xf100) {
-            if ((off >= 0xf020 and off <= 0xf02b) or off == 0xf085) { // system regs
+            if (off >= 0xf020 and off <= 0xf02b) { // system regs
                 if (flags.cycle) self.sched.cycle(4);
                 self.iowrite16(off, v);
             } else if (off >= 0xf067 and off <= 0xf06f) { // rtc
@@ -414,7 +414,7 @@ pub const H838606F = struct {
             } else if (off >= 0xf078 and off <= 0xf07f) { // i2c
                 if (flags.cycle) self.sched.cycle(4);
                 self.i2c.write16(off, v);
-            } else if (off >= 0xf086 and off <= 0xf08c) { // ioport
+            } else if (off >= 0xf085 and off <= 0xf08c) { // ioport
                 if (flags.cycle) self.sched.cycle(4);
                 self.ioport.write16(off, v);
             } else if (off >= 0xf0d0 and off <= 0xf0d1) { // tmrb1

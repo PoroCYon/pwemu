@@ -41,6 +41,7 @@ pub fn main() anyerror!void {
         const rrr = c.getline(&linebuf, &linelen, c.stdin);
         if (rrr < 0 or c.feof(c.stdin) != 0) {
             //std.debug.print("welp, getline() borked\n", .{});
+            print("\n", .{});
             break :mainloop;
         }
 

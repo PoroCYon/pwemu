@@ -1617,11 +1617,11 @@ fn handle_jsr_abs24(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16)
     const s = self.gsp() -% 2;
     self.ssp(s);
     self.write16(s, p);
-    print("jsr abs24: pc=0x{x:}, sp=0x{x:}\n", .{p, s});
+    //print("jsr abs24: pc=0x{x:}, sp=0x{x:}\n", .{p, s});
 
     //print("handler for jsr_abs24\n", .{});
-    insn.display();
-    self.stat();
+    //insn.display();
+    //self.stat();
     //@panic("checkme");
 }
 fn handle_jsr_MMabs8(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
@@ -2684,8 +2684,8 @@ fn handle_rts(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void 
     next(self);
 
     //print("handler for rts\n", .{});
-    insn.display();
-    self.stat();
+    //insn.display();
+    //self.stat();
 }
 fn handle_shal_b(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     next(self);

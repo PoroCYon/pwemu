@@ -1,7 +1,7 @@
 
 const H838606F = @import("../h838606f.zig").H838606F;
 
-pub const Sci3 = extern struct { // IO2
+pub const Sci3 = struct { // IO2
     sys: *H838606F,
 
     spcr: u8,
