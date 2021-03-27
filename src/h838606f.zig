@@ -221,6 +221,9 @@ pub const H838606F = struct {
             } else if (off >= 0xff98 and off <= 0xffa7) { // sci3, irda
                 if (flags.cycle) self.sched.cycle(3); // !!!
                 return self.sci3.read8(off);
+            } else if (off >= 0xffb0 and off <= 0xffb3) { // wdt
+                if (flags.cycle) self.sched.cycle(2);
+                return self.wdt.read8(off);
             } else if (off >= 0xffbc and off <= 0xffbf) { // adc
                 if (flags.cycle) self.sched.cycle(2);
                 return self.adc.read8(off);
@@ -299,6 +302,9 @@ pub const H838606F = struct {
             } else if (off >= 0xff98 and off <= 0xffa7) { // sci3, irda
                 if (flags.cycle) self.sched.cycle(6); // !!!
                 return self.sci3.read16(off);
+            } else if (off >= 0xffb0 and off <= 0xffb3) { // wdt
+                if (flags.cycle) self.sched.cycle(4);
+                return self.wdt.read16(off);
             } else if (off >= 0xffbc and off <= 0xffbf) { // adc
                 if (flags.cycle) {
                     if (off == 0xffbc or off == 0xffbd) {
@@ -376,6 +382,9 @@ pub const H838606F = struct {
             } else if (off >= 0xff98 and off <= 0xffa7) { // sci3, irda
                 if (flags.cycle) self.sched.cycle(3); // !!!
                 self.sci3.write8(off, v);
+            } else if (off >= 0xffb0 and off <= 0xffb3) { // wdt
+                if (flags.cycle) self.sched.cycle(2);
+                self.wdt.write8(off, v);
             } else if (off >= 0xffbc and off <= 0xffbf) { // adc
                 if (flags.cycle) self.sched.cycle(2);
                 self.adc.write8(off, v);
@@ -451,6 +460,9 @@ pub const H838606F = struct {
             } else if (off >= 0xff98 and off <= 0xffa7) { // sci3, irda
                 if (flags.cycle) self.sched.cycle(6); // !!!
                 self.sci3.write16(off, v);
+            } else if (off >= 0xffb0 and off <= 0xffb3) { // wdt
+                if (flags.cycle) self.sched.cycle(4);
+                self.wdt.write16(off, v);
             } else if (off >= 0xffbc and off <= 0xffbf) { // adc
                 if (flags.cycle) {
                     if (off == 0xffbc or off == 0xffbd) {

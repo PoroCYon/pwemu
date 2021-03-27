@@ -1,4 +1,6 @@
 
+const std = @import("std");
+
 const H838606F = @import("../h838606f.zig").H838606F;
 
 pub const Cmp = struct { // IO1
@@ -17,13 +19,20 @@ pub const Cmp = struct { // IO1
         self.cmdr = 0;
     }
 
-    pub fn write8 (self: *Cmp, off: usize, v: u8 ) void { }
+    pub fn write8 (self: *Cmp, off: usize, v: u8 ) void {
+        std.debug.print("write8 CMP unknown 0x{x:} <- 0x{x:}\n", .{off,v});
+        self.sys.sched.ibreak();
+    }
     pub inline fn write16(self: *Cmp, off: usize, v: u16) void {
         self.write8(off&0xfffe, @truncate(u8, v >> 8));
         self.write8(off|0x0001, @truncate(u8, v >> 0));
     }
 
-    pub fn read8 (self: *Cmp, off: usize) u8  { return 0; }
+    pub fn read8 (self: *Cmp, off: usize) u8  {
+        std.debug.print("read8 CMP unknown 0x{x:}\n", .{off});
+        self.sys.sched.ibreak();
+        return 0;
+    }
     pub inline fn read16(self: *Cmp, off: usize) u16 {
         return (@as(u16, self.read8(off&0xfffe)) << 8)
              | (@as(u16, self.read8(off|0x0001)) << 0);

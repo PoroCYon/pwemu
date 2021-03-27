@@ -1,4 +1,6 @@
 
+const std = @import("std");
+
 const H838606F = @import("../h838606f.zig").H838606F;
 
 pub const TmrW = struct { // IO1
@@ -33,10 +35,24 @@ pub const TmrW = struct { // IO1
         self.grd = 0;
     }
 
-    pub fn write8 (self: *TmrW, off: usize, v: u8 ) void { }
-    pub fn write16(self: *TmrW, off: usize, v: u16) void { }
+    pub fn write8 (self: *TmrW, off: usize, v: u8 ) void {
+        std.debug.print("write8 TMRW unknown 0x{x:} <- 0x{x:}\n", .{off,v});
+        self.sys.sched.ibreak();
+    }
+    pub fn write16(self: *TmrW, off: usize, v: u16) void {
+        std.debug.print("write16 TMRW unknown 0x{x:} <- 0x{x:}\n", .{off,v});
+        self.sys.sched.ibreak();
+    }
 
-    pub fn read8 (self: *TmrW, off: usize) u8  { return 0; }
-    pub fn read16(self: *TmrW, off: usize) u16 { return 0; }
+    pub fn read8 (self: *TmrW, off: usize) u8  {
+        std.debug.print("read8 TMRW unknown 0x{x:}\n", .{off});
+        self.sys.sched.ibreak();
+        return 0;
+    }
+    pub fn read16(self: *TmrW, off: usize) u16 {
+        std.debug.print("read16 TMRW unknown 0x{x:}\n", .{off});
+        self.sys.sched.ibreak();
+        return 0;
+    }
 };
 

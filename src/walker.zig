@@ -5,9 +5,12 @@ const Allocator = std.mem.Allocator;
 usingnamespace @import("iface.zig");
 
 const H838606F = @import("h838606f.zig").H838606F;
+const Bma150 = @import("walker/bma150.zig").Bma150;
 
 pub const Walker = struct {
     h838606f: H838606F,
+
+    bma150: Bma150,
 
 //  [0FFD4h].0  Port 1 Data bit0 OUT  SPI LCD writeselect (0=select)
 //  [0FFD4h].1  Port 1 Data bit1 OUT  SPI LCD access mode (0=Cmd, 1=Dta?)
@@ -33,14 +36,14 @@ pub const Walker = struct {
     pub fn read_io(self_: Iface_ud, port: u8) u8 {
         const self = @ptrCast(*Walker, self_);
 
-        std.debug.print("IO read port {x:}\n", .{port});
+        //std.debug.print("IO read port {x:}\n", .{port});
 
         return 0;
     }
     pub fn write_io(self_: Iface_ud, port: u8, val: u8, mask: u8) void {
         const self = @ptrCast(*Walker, self_);
 
-        std.debug.print("IO write port {x:} <- 0x{x:} & 0x{x:}\n", .{port,val,mask});
+        //std.debug.print("IO write port {x:} <- 0x{x:} & 0x{x:}\n", .{port,val,mask});
 
         switch (port) {
             1 => {
@@ -73,11 +76,22 @@ pub const Walker = struct {
     pub fn serial_read(self_: Iface_ud) u8 {
         const self = @ptrCast(*Walker, self_);
 
-        return 0;
+        std.debug.print("serial read...\n", .{});
+        self.h838606f.h8300h.stat();
+
+        var ret: u8 = 0;
+
+        if (self.acc_cs) ret |= self.bma150.read();
+
+        return ret;
     }
     pub fn serial_write(self_: Iface_ud, val: u8) void {
         const self = @ptrCast(*Walker, self_);
 
+        std.debug.print("serial write 0x{x:}\n", .{val});
+        self.h838606f.h8300h.stat();
+
+        if (self.acc_cs) self.bma150.write(val);
     }
 
     pub fn init(ret: *Walker, alloc: *Allocator, allocgp: *Allocator,
@@ -89,7 +103,8 @@ pub const Walker = struct {
         try H838606F.init(&ret.h838606f, iface, @ptrCast(Iface_ud, ret),
             alloc, allocgp, flashrom);
 
-        // TODO: init BMA150, SSD1854, EEPROM, speaker, buttons
+        ret.bma150 = Bma150.init(ret);
+        // TODO: init SSD1854, EEPROM, speaker, buttons
     }
 
     pub inline fn load_flashrom(self: *Walker, flashrom: *[48*1024]u8) void {
@@ -102,7 +117,8 @@ pub const Walker = struct {
     pub fn reset(self: *Walker) void {
         self.h838606f.reset();
 
-        // TODO: reset BMA150, SSD1854, EEPROM, speaker, buttons
+        self.bma150.reset();
+        // TODO: reset SSD1854, EEPROM, speaker, buttons
     }
 
     pub inline fn run(self: *Walker, inc: u64) void {

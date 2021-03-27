@@ -164,6 +164,7 @@ pub const IOPort = struct {
 
             else => {
                 std.debug.print("write8 unknown IOport address 0x{x:} <- 0x{x:}\n", .{off,v});
+                self.sys.sched.ibreak();
             }
         }
     }
@@ -205,6 +206,7 @@ pub const IOPort = struct {
 
             else => blk: {
                 std.debug.print("read8 unknown IOport address 0x{x:}\n", .{off});
+                self.sys.sched.ibreak();
                 break :blk undefined;
             }
         };

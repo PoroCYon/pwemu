@@ -453,32 +453,42 @@ fn handle_bcc_pcrel16(self: *H8300H, insn: Insn, oands: anytype, raw: []const u1
 }
 fn handle_bsr_pcrel8(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     //finf(self, raw);
+    const p = self.pc;
     next(self);
 
-    const oldpc = self.pc;
     const offu16 = if ((oands & 0x80) != 0) (0xff00 | @as(u16, oands))
                    else @as(u16, oands);
-    const ea = oldpc +% offu16 -% 2; // correct wrt prefetch
+    const ea = p +% offu16 -% 2; // correct wrt prefetch
+    const s = self.gsp() -% 2;
+
+    print("bsr pcrel8: pc=0x{x:}, sp=0x{x:}\n", .{ea, s});
+    self.stat();
+
     self.pc = ea;
     next(self);
 
-    self.write16(self.gsp(), oldpc);
-    self.ssp(self.gsp() -% 2);
+    self.ssp(s);
+    self.write16(s, p);
 
     //print("handler for bsr_pcrel8\n", .{});
     //insn.display();
 }
 fn handle_bsr_pcrel16(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
+    const p = self.pc;
     finf(self, raw);
     self.cycle(2);
 
-    const oldpc = self.pc;
-    const ea = oldpc +% oands -% 2; // correct wrt prefetch
+    const ea = p +% oands -% 2; // correct wrt prefetch
+    const s = self.gsp() -% 2;
+
+    print("bsr pcrel16: pc=0x{x:}, sp=0x{x:}\n", .{ea, s});
+    self.stat();
+
     self.pc = ea;
     next(self);
 
-    self.write16(self.gsp(), oldpc);
-    self.ssp(self.gsp() -% 2);
+    self.ssp(s);
+    self.write16(s, p);
 
     //print("handler for bsr_pcrel16\n", .{});
     //insn.display();
@@ -1595,7 +1605,7 @@ fn handle_jsr_Mern(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) 
     const s = self.gsp() -% 2;
     self.ssp(s);
     self.write16(s, p);
-    print("jsr Mern: pc=0x{x:}, sp=0x{x:}\n", .{p, s});
+    print("jsr Mern: pc=0x{x:}, sp=0x{x:}\n", .{a, s});
 
     //print("handler for jsr_Mern\n", .{});
     insn.display();
@@ -1611,17 +1621,18 @@ fn handle_jsr_abs24(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16)
     const p = self.pc;
     const m = @truncate(u16, oands);
     const a = m;//self.read16(m); // TODO: is this a direct immediate, or indirect?
+    const s = self.gsp() -% 2;
+
+    print("jsr abs24: pc=0x{x:}, sp=0x{x:}\n", .{a, s});
+    self.stat();
+
     self.pc = a;
     next(self);
 
-    const s = self.gsp() -% 2;
     self.ssp(s);
     self.write16(s, p);
-    //print("jsr abs24: pc=0x{x:}, sp=0x{x:}\n", .{p, s});
-
     //print("handler for jsr_abs24\n", .{});
     //insn.display();
-    //self.stat();
     //@panic("checkme");
 }
 fn handle_jsr_MMabs8(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
@@ -1744,6 +1755,7 @@ fn handle_mov_w_rn_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u1
 
     //print("handler for mov_w_rn_rn\n", .{});
     //insn.display();
+    //self.stat();
 }
 fn handle_mov_l_rn_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     next(self);
@@ -2676,6 +2688,7 @@ fn handle_rts(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void 
     const sp = self.gsp();
     const pc = self.read16(sp);
     print("rts: return to H'{x:4}\n", .{pc});
+    self.stat();
 
     self.ssp(sp +% 2);
     self.pc  = pc;
@@ -2685,7 +2698,6 @@ fn handle_rts(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void 
 
     //print("handler for rts\n", .{});
     //insn.display();
-    //self.stat();
 }
 fn handle_shal_b(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     next(self);
@@ -2977,6 +2989,8 @@ fn handle_sub_b_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) 
     self.shl(oands.b, r);
     flg_arith(u8, self, a, b, r, false, .sub);
 
+    next(self);
+
     //print("handler for sub_b_rn\n", .{});
     //insn.display();
 }
@@ -2989,6 +3003,8 @@ fn handle_sub_w_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) 
     self.srn(oands.b, r);
     flg_arith(u16, self, a, b, r, false, .sub);
 
+    next(self);
+
     //print("handler for sub_w_rn\n", .{});
     //insn.display();
 }
@@ -3000,6 +3016,8 @@ fn handle_sub_l_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) 
     const r = b -% a;
     self.ser(oands.b, r);
     flg_arith(u32, self, a, b, r, false, .sub);
+
+    next(self);
 
     //print("handler for sub_l_rn\n", .{});
     //insn.display();
@@ -3021,6 +3039,8 @@ fn handle_subx_imm(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) 
     self.shl(oands.b, r);
     flg_arith(u8, self, a, b, r, true, .sub);
 
+    next(self);
+
     //print("handler for subx_imm\n", .{});
     //insn.display();
 }
@@ -3033,12 +3053,16 @@ fn handle_subx_rn(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) v
     self.shl(oands.b, r);
     flg_arith(u8, self, a, b, r, true, .sub);
 
+    next(self);
+
     //print("handler for subx_rn\n", .{});
     //insn.display();
 }
 fn handle_trapa(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     self.orp(@intToEnum(PendingExn, @enumToInt(PendingExn.trp0) << oands));
     // fallthrough to handle_exn, where the actual instruction handling stuff is done
+
+    next(self);
 
     //print("handler for trapa\n", .{});
     //insn.display();
