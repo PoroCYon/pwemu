@@ -79,21 +79,35 @@ pub const Walker = struct {
 
 
         var ret: u8 = 0;
+        var anyresp = false;
 
-        if (self.acc_cs) ret |= self.bma150.read();
+        if (self.acc_cs) { ret |= self.bma150.read(); anyresp = true; }
 
         std.debug.print("serial read -> 0x{x:}\n", .{ret});
         //self.h838606f.h8300h.stat();
+
+        if (!anyresp) {
+            std.debug.print("serial read from unk. device! lcd={} (lacc={}) eep={}, acc={}\n",
+                .{self.lcd_cs, self.lcd_access, self.eep_cs, self.acc_cs});
+            self.h838606f.sched.ibreak();
+        }
 
         return ret;
     }
     pub fn serial_write(self_: Iface_ud, val: u8) void {
         const self = @ptrCast(*Walker, self_);
+        var anycmd = false;
 
         std.debug.print("serial write 0x{x:}\n", .{val});
         //self.h838606f.h8300h.stat();
 
-        if (self.acc_cs) self.bma150.write(val);
+        if (self.acc_cs) { self.bma150.write(val); anycmd = true; }
+
+        if (!anycmd) {
+            std.debug.print("serial write to unk. device! lcd={} (lacc={}) eep={}, acc={}\n",
+                .{self.lcd_cs, self.lcd_access, self.eep_cs, self.acc_cs});
+            self.h838606f.sched.ibreak();
+        }
     }
 
     pub fn init(ret: *Walker, alloc: *Allocator, allocgp: *Allocator,

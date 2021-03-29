@@ -10,10 +10,12 @@ const c = @cImport({
     @cInclude("libco.h");
 });
 
+pub const Event_ud = *align(8) c_void;
 pub const Event = struct {
+    id: u64,
     time: u64,
-    ud: *c_void,
-    do: fn(*H838606F, *c_void)void
+    ud: Event_ud,
+    do: fn(*H838606F, Event_ud)void
 };
 
 fn cmpTime(ctx: void, a: Event, b: Event) bool {
@@ -26,6 +28,7 @@ pub const Sched = struct {
     sys: *H838606F,
     cycles: u64,
     target: u64,
+    uidno: u64,
     events: ArrayList(Event),
     runthrd: c.cothread_t,
     mainthrd: c.cothread_t,
@@ -33,7 +36,7 @@ pub const Sched = struct {
     interactive: bool,
 
     pub fn init(s: *H838606F, alloc: *Allocator) Sched {
-        return Sched { .sys = s, .cycles = 0, .target = 0,
+        return Sched { .sys = s, .cycles = 0, .target = 0, .uidno = 0,
             .events = ArrayList(Event).init(alloc),
 
             .runthrd = c.co_create(1*1024*1024, runthread),
@@ -91,9 +94,27 @@ pub const Sched = struct {
         }
     }
 
-    pub fn enqueue(self: *Sched, t: u64, ev: fn(*H838606F, *c_void)void, ud: *c_void) void {
-        self.events.enqueue(Event { .time = t, .ud = ud, .do = ev });
+    pub fn enqueue(self: *Sched, t: u64, ev: fn(*H838606F, Event_ud)void, ud: Event_ud) u64 {
+        self.uidno = self.uidno + 1;
+        const id = self.uidno;
+        self.events.append(Event { .time = self.cycles + t, .ud = ud, .do = ev, .id = id }) catch {
+            return 0;
+        };
         std.sort.sort(Event, self.events.items, {}, cmpTime);
+        return id;
+    }
+    pub fn cancel_ev(self: *Sched, uid: u64) void {
+        var ind: usize = undefined;
+        var found = false;
+        for (self.events.items) |ev, i| {
+            if (ev.id == uid) {
+                ind = i;
+                found = true;
+                break;
+            }
+        }
+
+        if (found) _ = self.events.orderedRemove(ind);
     }
 
     fn runthread() callconv(.C) void {

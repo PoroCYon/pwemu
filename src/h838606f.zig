@@ -96,7 +96,7 @@ pub const H838606F = struct {
         ret.ienr1 = 0; ret.ienr2 = 0; ret.osscr = 0;
         ret.irr1 = 0; ret.irr2 = 0; ret.clkstpr1 = 0; ret.clkstpr2 = 0;
 
-        ret.ram = @ptrCast(*[2*1024]u8, try alloc.alloc(u8, 2*1024));
+        ret.ram = @ptrCast(*[0x800]u8, try alloc.alloc(u8, 0x800));
         //std.mem.set([2*1024]u8, ret.ram, 0);
         //ret.flash = @ptrCast(*[48*1024]u8, try alloc.alloc(u8, 48*1024));
         //ret.load_rom(flashrom);
@@ -110,8 +110,6 @@ pub const H838606F = struct {
     }
 
     pub fn reset(self: *H838606F) void {
-        //c.h8300h_reset(&self.h8300h);
-
         self.rtc.reset();
         self.i2c.reset();
         self.ioport.reset();
@@ -131,7 +129,7 @@ pub const H838606F = struct {
         self.ienr1 = 0; self.ienr2 = 0; self.osscr = 0;
         self.irr1 = 0; self.irr2 = 0; self.clkstpr1 = 0; self.clkstpr2 = 0;
 
-        for (self.ram[0..(2*1024)]) |_, i| self.ram[i] = 0;
+        for (self.ram[0..(0x800)]) |_, i| self.ram[i] = 0;
         //std.mem.set([2*1024]u8, self.ram, 0);
     }
 
@@ -205,9 +203,9 @@ pub const H838606F = struct {
                 self.sched.ibreak();
                 return undefined;
             }
-        } else if (off >= 0xfb80 and off < 0xff80) {
+        } else if (off >= 0xf780 and off < 0xff80) {
             if (flags.cycle) self.sched.cycle(2);
-            return self.ram[off - 0xfb80];
+            return self.ram[off - 0xf780];
         } else if (off >= 0xff80 and off <=0xffff) {
             if (off >= 0xff8c and off <= 0xff8f) { // aec
                 if (flags.cycle) self.sched.cycle(2);
@@ -282,11 +280,11 @@ pub const H838606F = struct {
                 self.sched.ibreak();
                 return undefined;
             }
-        } else if (off >= 0xfb80 and off < 0xff80) {
+        } else if (off >= 0xf780 and off < 0xff80) {
             // big-endian
             if (flags.cycle) self.sched.cycle(2);
-            return (@as(u16, self.ram[(off&0xfffe)-0xfb80]) << 8)
-                 |  @as(u16, self.ram[(off|0x0001)-0xfb80]);
+            return (@as(u16, self.ram[(off&0xfffe)-0xf780]) << 8)
+                 |  @as(u16, self.ram[(off|0x0001)-0xf780]);
         } else if (off >= 0xff80 and off <=0xffff) {
             // timings aren't 100% accurate (8bit-bus accesses should be spread
             // up over multiple cycles, but, meh)
@@ -365,9 +363,9 @@ pub const H838606F = struct {
                 std.debug.print("write8 unknown IO1 address 0x{x:} <- 0x{x:}\n", .{off,v});
                 self.sched.ibreak();
             }
-        } else if (off >= 0xfb80 and off < 0xff80) {
+        } else if (off >= 0xf780 and off < 0xff80) {
             if (flags.cycle) self.sched.cycle(2);
-            self.ram[off-0xfb80] = v;
+            self.ram[off-0xf780] = v;
         } else if (off >= 0xff80 and off <=0xffff) {
             // IO2 TODO
             if (off >= 0xff8c and off <= 0xff8f) { // aec
@@ -442,11 +440,11 @@ pub const H838606F = struct {
                 std.debug.print("write16 unknown IO1 address 0x{x:} <- 0x{x:}\n", .{off,v});
                 self.sched.ibreak();
             }
-        } else if (off >= 0xfb80 and off < 0xff80) {
+        } else if (off >= 0xf780 and off < 0xff80) {
             // big-endian
             if (flags.cycle) self.sched.cycle(2);
-            self.ram[(off&0xfffe)-0xfb80] = @truncate(u8, v >> 8);
-            self.ram[(off|0x0001)-0xfb80] = @truncate(u8, v &255);
+            self.ram[(off&0xfffe)-0xf780] = @truncate(u8, v >> 8);
+            self.ram[(off|0x0001)-0xf780] = @truncate(u8, v &255);
         } else if (off >= 0xff80 and off <=0xffff) {
             if (off >= 0xff8c and off <= 0xff8f) { // aec
                 if (flags.cycle) self.sched.cycle(2); // 16-bit bus!

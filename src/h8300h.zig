@@ -21,8 +21,12 @@ pub const PendingExn = enum(u64) { // TODO: flags enum?
 
     rst = 1<<0, nmi = 1<<7, trp0 = 1<<8, trp1 = 1<<9,
     trp2 = 1<<10, trp3 = 1<<11, slp = 1<<13,
-    // TODO: irq0/irq1/irqaec, all other interrupts!
-    irq = 1<<16 // check irr/irr2
+    irq0 = 1<<16, irq1 = 1<<17, irqaec = 1<<18,
+    comp0 = 1<<21, comp1 = 1<<22,
+    rtc0s25 = 1<<23, rtc0s5 = 1<<24, rtc1s = 1<<25, rtc1m = 1<<26,
+    rtc1h = 1<<27, rtc1d = 1<<28, rtc1w = 1<<29, rtcovf = 1<<30,
+    wdt = 1<<31, aec = 1<<32, tmrb1 = 1<<33, ssu = 1<<34, tmrw = 1<<35,
+    sci3 = 1<<37, adc = 1<<38
 };
 
 pub const H8300H = struct {
@@ -93,6 +97,10 @@ pub const H8300H = struct {
     pub fn write16(self: *H8300H, addr: u16, v: u16) void {
         self.sys.write16(addr, v, .{.cycle=true,.eff=true});
         //self.cycle(2); // good enough for now
+    }
+
+    pub inline fn raise(self: *H8300H, newirq: PendingExn) void {
+        self.orp(newirq);
     }
 
     fn handle_exn(self: *H8300H) void {

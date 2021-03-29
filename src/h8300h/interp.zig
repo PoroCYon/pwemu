@@ -82,8 +82,8 @@ pub fn exec(self: *H8300H) void {
 
         @panic("illegal insn!");
     };
-    //self.stat();
-    //insn.display();
+    insn.display();
+    self.stat();
 
     //print("table index #{}, tag {}\n", .{@enumToInt(@as(Opcode, insn)), @as(Opcode, insn)});
     const hrow = insntab[@enumToInt(@as(Opcode, insn))];
@@ -428,7 +428,7 @@ fn handle_bcc_pcrel16(self: *H8300H, insn: Insn, oands: anytype, raw: []const u1
     finf(self, raw);
     self.cycle(2);
 
-    const ea = self.pc +% oands.a -% 2; // correct wrt prefetch
+    const ea = self.pc +% oands.a; // do NOT correct wrt prefetch
     const branch = switch (oands.cc) {
         .a => true, .n => false,
         .hi => !self.hasc(.c) and !self.hasc(.z),
@@ -458,7 +458,7 @@ fn handle_bsr_pcrel8(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16
 
     const offu16 = if ((oands & 0x80) != 0) (0xff00 | @as(u16, oands))
                    else @as(u16, oands);
-    const ea = p +% offu16 -% 2; // correct wrt prefetch
+    const ea = p +% offu16;
     const s = self.gsp() -% 2;
 
     print("bsr pcrel8: pc=0x{x:}, sp=0x{x:}\n", .{ea, s});
@@ -474,11 +474,11 @@ fn handle_bsr_pcrel8(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16
     //insn.display();
 }
 fn handle_bsr_pcrel16(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
-    const p = self.pc;
     finf(self, raw);
+    const p = self.pc;
     self.cycle(2);
 
-    const ea = p +% oands -% 2; // correct wrt prefetch
+    const ea = p +% oands;
     const s = self.gsp() -% 2;
 
     print("bsr pcrel16: pc=0x{x:}, sp=0x{x:}\n", .{ea, s});
@@ -802,7 +802,7 @@ fn handle_bld_abs8(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) 
     const a = @as(u16, oands.b) | 0xff00;
     const m = self.read8(a);
     const r = m & (@as(u8,1) << oands.a);
-    self.setc(.c, if (r == 0) .c else .none);
+    self.setc(.c, if (r != 0) .c else .none);
 
     next(self);
     //print("handler for bld_abs8\n", .{});
@@ -2686,6 +2686,7 @@ fn handle_rts(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void 
 
     // @sp+ -> pc
     const sp = self.gsp();
+    print("rts: sp at H'{x:4}\n", .{sp});
     const pc = self.read16(sp);
     print("rts: return to H'{x:4}\n", .{pc});
     self.stat();
