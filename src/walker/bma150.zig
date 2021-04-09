@@ -5,12 +5,11 @@ const Walker = @import("../walker.zig").Walker;
 
 pub const BmaState = enum {
     idle,
-    willread,
     inread,
     inwrite,
 };
 
-pub const Bma150 = struct { // IO1
+pub const Bma150 = struct {
     sys: *Walker,
 
     state: BmaState,
@@ -50,44 +49,26 @@ pub const Bma150 = struct { // IO1
         self.data[0x35] = 0x80;
     }
 
-    pub fn read(self: *Bma150) u8 {
+    pub fn xfer(self: *Bma150, v: u8) u8 {
         return switch (self.state) {
             .idle => blk: {
-                std.debug.print("W: read BMA150 SPI in idle state!\n", .{});
+                self.addr = @truncate(u7, v);
+                if (v & 0x80 == 0) {
+                    self.state = .inwrite;
+                } else self.state = .inread;
                 break :blk 0;
             },
-            .willread => 0, // dummy stuff
             .inread => blk: {
                 const ret = self.data[self.addr];
                 self.addr = self.addr +% 1;
                 break :blk ret;
             },
-            else => blk: {
-                std.debug.print("E: read BMA150 SPI in WTF state! {}\n", .{@tagName(self.state)});
-                self.sys.h838606f.sched.ibreak();
-                break :blk 0;
-            }
-        };
-    }
-    pub fn write(self: *Bma150, v: u8) void {
-        switch (self.state) {
-            .idle => {
-                self.addr = @truncate(u7, v);
-                if (v & 0x80 == 0) {
-                    self.state = .inwrite;
-                } else self.state = .willread;
-            },
-            .willread => self.state = .inread, // strobe write for reads
-            .inread => { }, // strobe write for reads
-            .inwrite => {
+            .inwrite => blk: {
                 self.data[self.addr] = v;
                 self.addr = self.addr +% 1;
+                break :blk 0;
             },
-            //else => {
-            //    std.debug.print("E: write BMA150 SPI in WTF state! {}\n", .{@tagName(self.state)});
-            //    self.sys.h838606f.sched.ibreak();
-            //}
-        }
+        };
     }
 
     pub fn cs_end(self: *Bma150) void {

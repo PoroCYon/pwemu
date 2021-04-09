@@ -100,7 +100,8 @@ pub const H8300H = struct {
     }
 
     pub inline fn raise(self: *H8300H, newirq: PendingExn) void {
-        self.orp(newirq);
+        //if (!self.hasc(.i))
+            self.orp(newirq);
     }
 
     fn handle_exn(self: *H8300H) void {
@@ -179,7 +180,7 @@ pub const H8300H = struct {
 
     fn handle_exec(self: *H8300H) void {
         // TODO: if ldc(/stc?), do NOT go to exn state! AT ALL!
-        if (self.pending != .none) {
+        if (self.pending != .none and !self.hasc(.i)) {
             self.state = .exn; // !
             return;
         }
@@ -247,7 +248,6 @@ pub const H8300H = struct {
         self.ccr = @intToEnum(CCR, @enumToInt(f)^@enumToInt(self.ccr));
     }
     pub inline fn hasc(self: *const H8300H, f: CCR) bool {
-        const res = (@enumToInt(self.ccr) & @enumToInt(f));
         const rv = (@enumToInt(self.ccr) & @enumToInt(f)) != 0;
         return rv;
     }

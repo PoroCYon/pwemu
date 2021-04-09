@@ -82,8 +82,8 @@ pub fn exec(self: *H8300H) void {
 
         @panic("illegal insn!");
     };
-    insn.display();
-    self.stat();
+    //insn.display();
+    //self.stat();
 
     //print("table index #{}, tag {}\n", .{@enumToInt(@as(Opcode, insn)), @as(Opcode, insn)});
     const hrow = insntab[@enumToInt(@as(Opcode, insn))];

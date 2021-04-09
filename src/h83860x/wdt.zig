@@ -33,7 +33,7 @@ pub const Wdt = struct { // IO2
     }
 
     fn tcwd_cur(self: *Wdt) u64 {
-        return @divExact((self.sys.sched.cycles - self.start), self.mwd2clks());
+        return @divTrunc((self.sys.sched.cycles - self.start), self.mwd2clks());
     }
     fn on_ovf(sys: *H838606F, self_: Event_ud) void {
         const self = @ptrCast(*Wdt, self_);

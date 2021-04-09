@@ -4,6 +4,7 @@ const std = @import("std");
 const c = @cImport({
     @cInclude("stdio.h");
     @cInclude("stdlib.h");
+    @cInclude("string.h");
 });
 
 usingnamespace @import("walker.zig");
@@ -47,6 +48,8 @@ pub fn main() anyerror!void {
 
         if (linelen == 0) {
             // TODO: prev. cmd
+        } else if (c.strcmp(linebuf, "stat") == 0) {
+            walker.h838606f.h8300h.stat();
         } else {
             // TODO: actual cmd parsing
             const cycles = c.strtoul(linebuf, null, 0);
