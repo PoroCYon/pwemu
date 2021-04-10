@@ -446,10 +446,11 @@ fn handle_bcc_pcrel16(self: *H8300H, insn: Insn, oands: anytype, raw: []const u1
     if (branch) {
         self.pc = ea;
         next(self);
-    } else _ = self.read16(ea);
+    } else next(self);//self.fetch = self.read16(ea);
 
     //print("handler for bcc_pcrel16\n", .{});
     //insn.display();
+    //self.stat();
 }
 fn handle_bsr_pcrel8(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) void {
     //finf(self, raw);
