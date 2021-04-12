@@ -1495,6 +1495,7 @@ fn handle_exts_l(self: *H8300H, insn: Insn, oands: anytype, raw: []const u16) vo
     flg_logic(u32, self, v);
     self.setc(.v, .none);
 
+    next(self);
     //print("handler for exts_l\n", .{});
     //insn.display();
 }

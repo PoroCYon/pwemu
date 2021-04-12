@@ -203,6 +203,10 @@ pub const IOPort = struct {
             },
             0xffe0 => @as(u8,self.pucr1),
             0xffe1 => @as(u8,self.pucr3),
+            0xffe4 => @as(u8,self.pcr1),
+            0xffe6 => @as(u8,self.pcr3),
+            0xffeb => @as(u8,@as(u5,self.pcr8)<<2),
+            0xffec => @as(u8,self.pcr9),
 
             else => blk: {
                 std.debug.print("read8 unknown IOport address 0x{x:}\n", .{off});

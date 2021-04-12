@@ -23,12 +23,15 @@ pub const Walker = struct {
 //  [0FFD6h].2  Port 3 Data bit2      ?
 //  [0FFDBh].2  Port 8 Data bit2      ?
 //  [0FFDBh].3  Port 8 Data bit3      ?
-//  [0FFDBh].4  Port 8 Data bit4 OUT  A/D related ... whatfor LCD? accel? batt?
+//  [0FFDBh].4  Port 8 Data bit4 OUT  A/D related ... something battery-related
 //  [0FFDCh].0  Port 9 Data bit0 OUT  SPI Accelerometer chipselect (0=select)
 //  [0FFDEh].0  Port B Data bit0 IN   ?  ;\
 //  [0FFDEh].2  Port B Data bit2 IN   ?  ; maybe buttons
 //  [0FFDEh].4  Port B Data bit4 IN   ?  ;/
 //  [0FFDEh].5  Port B Data bit5 OUT  ?
+
+    // IENR2 bit 6 == adc irq
+    // ckstpr1 bit 4 == adc clk
 
     lcd_cs: bool,
     lcd_access: u1,
