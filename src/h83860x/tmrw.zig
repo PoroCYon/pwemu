@@ -6,14 +6,14 @@ const H838606F = @import("../h838606f.zig").H838606F;
 pub const TmrW = struct { // IO1
     sys: *H838606F,
 
-    tmrw: u8,
-    tcrw: u8,
-    tierw: u8,
-    tsrw: u8,
-    tior0: u8,
-    tior1: u8,
-    tcnt: u16,
-    gra: u16, grb: u16, grc: u16, grd: u16,
+    tmrw: u8, // f0f0
+    tcrw: u8, // f0f1
+    tierw: u8, // f0f2
+    tsrw: u8, // f0f3
+    tior0: u8, // f0f4
+    tior1: u8, // f0f5
+    tcnt: u16, // f0f6
+    gra: u16, grb: u16, grc: u16, grd: u16, // f0f8..f0ff
 
     pub fn init(s: *H838606F) TmrW {
         return TmrW { .sys = s,
@@ -29,10 +29,10 @@ pub const TmrW = struct { // IO1
         self.tior0 = 0;
         self.tior1 = 0;
         self.tcnt = 0;
-        self.gra = 0;
-        self.grb = 0;
-        self.grc = 0;
-        self.grd = 0;
+        self.gra = 0xffff;
+        self.grb = 0xffff;
+        self.grc = 0xffff;
+        self.grd = 0xffff;
     }
 
     pub fn write8 (self: *TmrW, off: usize, v: u8 ) void {

@@ -663,3 +663,8 @@ pub const H838606F = struct {
 //   fa: CLKSTPR1: clk stop
 //   fb: CLKSTPR2
 
+//write8 TMRW unknown 0xf0f1 <- 0xc0
+//B! pc=0x36d0 fetched=0xf010 ccr=----n--- state=State.exec pending=PendingExn.none
+//er0=0x    c000 er1=0x       8 er2=0xaaaaaaaa er3=0xaaaaaaaa
+//er4=0xaaaaaaaa er5=0xaaaaaaaa er6=0xaaaaf7be er7=0xaaaaff7a
+

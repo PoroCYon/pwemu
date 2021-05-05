@@ -49,22 +49,23 @@ system has reached the specified number of cycles.
 
 CPU and IO ports implemented, SSU and BMA150 have code to get things working,
 but need a proper implementation so timings and behavior are actually correct
-in all cases, and not just for the code the Pokéwalker happens to run.
-
-Everything else (talking to the EEPROM, LCD display, buzzer, buttons, and much
-more) is yet to be started on.
+in all cases, and not just for the code the Pokéwalker happens to run. The
+EEPROM is implemented, and there's a stub for LCD stuff, but it does nothing
+to display things yet. Some peripherals (ADC, WDT), but the rest isn't (AEC,
+CMP, I2C, RTC, SCI3, timers), and therefore IR comms, the buzzer, ... aren't,
+either.
 
 ## Internal sturcture
 
 Aka, how to get started working on the source code.
 
-If you don't kno Zig, that's not much of a problem. This is my first Zig
+If you don't know Zig, it's not that much of a problem. This is my first Zig
 project, too, so I also don't know much about what I'm doing. You'll probably
 be fine if you know C and keep [this nice overview of the language
 ](https://ziglang.org/documentation/0.7.1/) at hand, as that's what I've been
 doing.
 
-The entrypoint is in `main.zig`. It instantiatese a `Walker` (from
+The entrypoint is in `main.zig`. It instantiates a `Walker` (from
 `walker.zig`), which represents the entire Pokéwalker (NTR-PHC-01 PCB and
 components). Most of these components can be found inside the `walker/` folder,
 except for the main H8/38606 MCU, which lives in `h838606f.zig`.
@@ -84,7 +85,7 @@ MMIO register accesses, as well as their `reset()` function.
 The 38606 can talk to the outside world (i.e. the rest of the PCB), this is
 done using an `Iface` struct, containing a few callbacks. The `Walker`
 implements these to eg. redirect SPI traffic to the correct component,
-depending on the GPIO pin state, which act as chip select.
+depending on the GPIO pin state, which acts as chip select.
 
 The final part is the scheduler, in `sched.zig`. It uses `libco` (from Higan)
 under the hood, and has more or less the same features as melonDS' scheduler.
